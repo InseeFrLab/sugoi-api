@@ -14,7 +14,9 @@
 package fr.insee.sugoi.store.file;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.model.Application;
@@ -161,7 +163,7 @@ public class FileWriterStoreTest {
     address.put("Ligne1", "Orga");
     address.put("Ligne2", "Chez orga");
     organization.setAddress(address);
-    fileWriterStore.createOrganization(organization);
+    fileWriterStore.createOrganization(organization, null);
     fileReaderStore.getOrganization("testo");
     Organization retrievedOrga = fileReaderStore.getOrganization("Titi");
 
@@ -177,7 +179,7 @@ public class FileWriterStoreTest {
     address.put("Ligne1", "Orga");
     address.put("Ligne2", "Chez orga");
     organization.setAddress(address);
-    fileWriterStore.updateOrganization(organization);
+    fileWriterStore.updateOrganization(organization, null);
     Organization retrievedOrga = fileReaderStore.getOrganization("testo");
     assertThat(
         "testo should have a new description",
@@ -191,12 +193,12 @@ public class FileWriterStoreTest {
   public void testDeleteOrganization() {
     Organization organization = new Organization();
     organization.setIdentifiant("asupprimer");
-    fileWriterStore.createOrganization(organization);
+    fileWriterStore.createOrganization(organization, null);
     assertThat(
         "asupprimer should have been created",
         fileReaderStore.getOrganization("asupprimer"),
         is(not(nullValue())));
-    fileWriterStore.deleteOrganization("asupprimer");
+    fileWriterStore.deleteOrganization("asupprimer", null);
     assertThat(
         "asupprimer should have been deleted",
         fileReaderStore.getOrganization("asupprimer"),
@@ -214,7 +216,7 @@ public class FileWriterStoreTest {
     address.put("Ligne1", "Toto");
     address.put("Ligne2", "Chez Toto");
     user.setAddress(address);
-    fileWriterStore.createUser(user);
+    fileWriterStore.createUser(user, null);
     User retrievedUser = fileReaderStore.getUser("Titi");
     assertThat("Titi should have been added", retrievedUser, not(nullValue()));
     assertThat("Titi should have an address", retrievedUser.getAddress().get("Ligne1"), is("Toto"));
@@ -227,7 +229,7 @@ public class FileWriterStoreTest {
     user.setLastName("Test");
     user.setFirstName("Petit");
     user.setMail("petittest@titi.fr");
-    fileWriterStore.createUser(user);
+    fileWriterStore.createUser(user, null);
     User retrievedUser = fileReaderStore.getUser("TitiNoAddress");
     assertThat("TitiNoAddress should have been added", retrievedUser, not(nullValue()));
     assertThat("TitiNoAddress shouldn't have an address", retrievedUser.getAddress().size(), is(0));
@@ -241,7 +243,8 @@ public class FileWriterStoreTest {
     address.put("Ligne1", "Toto");
     address.put("Ligne2", "Chez Toto");
     user.setAddress(address);
-    fileWriterStore.updateUser(user);
+    fileWriterStore.updateUser(user, null);
+
     User modifiedUser = fileReaderStore.getUser("testo");
     assertThat("testo should have a new mail", modifiedUser.getMail(), is("nvtest@insee.fr"));
     assertThat("testo should have an address", modifiedUser.getAddress().get("Ligne1"), is("Toto"));
@@ -252,8 +255,8 @@ public class FileWriterStoreTest {
     User userToDelete = new User();
     userToDelete.setUsername("byebye");
     userToDelete.setMail("byebye@toto.fr");
-    fileWriterStore.createUser(userToDelete);
-    fileWriterStore.addUserToGroup("Applitest", "Utilisateurs_Applitest", "byebye");
+    fileWriterStore.createUser(userToDelete, null);
+    fileWriterStore.addUserToGroup("Applitest", "Utilisateurs_Applitest", "byebye", null);
     assertThat(
         "byebye is in Utilisateurs_Applitest",
         fileReaderStore.getGroup("Applitest", "Utilisateurs_Applitest").getUsers().stream()
@@ -262,7 +265,7 @@ public class FileWriterStoreTest {
         "byebye is in Utilisateurs_Applitest",
         fileReaderStore.getUsersInGroup("Applitest", "Utilisateurs_Applitest").getResults().stream()
             .anyMatch(user -> user.getUsername().equalsIgnoreCase("byebye")));
-    fileWriterStore.deleteUser("byebye");
+    fileWriterStore.deleteUser("byebye", null);
     assertThat(
         "byebye should have been deleted", fileReaderStore.getUser("byebye"), is(nullValue()));
     assertThat(
@@ -291,7 +294,7 @@ public class FileWriterStoreTest {
     groups.add(group1);
     groups.add(group2);
     application.setGroups(groups);
-    fileWriterStore.createApplication(application);
+    fileWriterStore.createApplication(application, null);
     Application retrievedApp = fileReaderStore.getApplication("MyApplication");
     assertThat("MyApplication should have been added", retrievedApp, not(nullValue()));
     assertThat(
@@ -316,7 +319,7 @@ public class FileWriterStoreTest {
         .get()
         .getUsers()
         .remove(0);
-    fileWriterStore.updateApplication(application);
+    fileWriterStore.updateApplication(application, null);
     Application retrievedApplication = fileReaderStore.getApplication("Applitest");
     assertThat(
         "Applitest should have group1",
@@ -343,12 +346,12 @@ public class FileWriterStoreTest {
     Group group1 = new Group();
     group1.setName("Group1_NotEmptyApplication");
     application.setGroups(groups);
-    fileWriterStore.createApplication(application);
+    fileWriterStore.createApplication(application, null);
     assertThat(
         "NotEmptyApplication should exist",
         fileReaderStore.getApplication("NotEmptyApplication"),
         is(not(nullValue())));
-    fileWriterStore.deleteApplication("NotEmptyApplication");
+    fileWriterStore.deleteApplication("NotEmptyApplication", null);
     assertThat(
         "NotEmptyApplication should have been deleted",
         fileReaderStore.getApplication("NotEmptyApplication"),
@@ -365,7 +368,7 @@ public class FileWriterStoreTest {
     List<User> users = new ArrayList<>();
     users.add(user);
     group.setUsers(users);
-    fileWriterStore.createGroup("Applitest", group);
+    fileWriterStore.createGroup("Applitest", group, null);
     assertThat(
         "Should retrieve Groupy",
         fileReaderStore.getGroup("Applitest", "Groupy_Applitest").getName(),
@@ -377,8 +380,8 @@ public class FileWriterStoreTest {
     Group group = new Group();
     group.setName("Asupprimer_WebServicesLdap");
     group.setDescription("supprime ce groupe");
-    fileWriterStore.createGroup("WebServicesLdap", group);
-    fileWriterStore.deleteGroup("WebServicesLdap", "Asupprimer_WebServicesLdap");
+    fileWriterStore.createGroup("WebServicesLdap", group, null);
+    fileWriterStore.deleteGroup("WebServicesLdap", "Asupprimer_WebServicesLdap", null);
     assertThat(
         "Should have been deleted",
         fileReaderStore.getGroup("WebServicesLdap", "Asupprimer_WebServicesLdap"),
@@ -387,7 +390,7 @@ public class FileWriterStoreTest {
 
   @Test
   public void testAddUserInGroup() {
-    fileWriterStore.addUserToGroup("Applitest", "Administrateurs_Applitest", "testc");
+    fileWriterStore.addUserToGroup("Applitest", "Administrateurs_Applitest", "testc", null);
     assertThat(
         "Group should contain testc",
         fileReaderStore
@@ -406,9 +409,9 @@ public class FileWriterStoreTest {
             .getResults()
             .size(),
         is(0));
-    fileWriterStore.addUserToGroup("Applitest", "Administrateurs_Applitest", "testc");
-    fileWriterStore.addUserToGroup("Applitest", "Administrateurs_Applitest", "testo");
-    fileWriterStore.deleteUserFromGroup("Applitest", "Administrateurs_Applitest", "testo");
+    fileWriterStore.addUserToGroup("Applitest", "Administrateurs_Applitest", "testc", null);
+    fileWriterStore.addUserToGroup("Applitest", "Administrateurs_Applitest", "testo", null);
+    fileWriterStore.deleteUserFromGroup("Applitest", "Administrateurs_Applitest", "testo", null);
     assertThat(
         "Group should not contain testo",
         fileReaderStore
@@ -437,7 +440,7 @@ public class FileWriterStoreTest {
   public void testUpdateGroup() {
     Group group = fileReaderStore.getGroup("Applitest", "Administrateurs_Applitest");
     group.setDescription("new description");
-    fileWriterStore.updateGroup("Applitest", group);
+    fileWriterStore.updateGroup("Applitest", group, null);
     assertThat(
         "SuperGroup description should be new description",
         fileReaderStore.getGroup("Applitest", "Administrateurs_Applitest").getDescription(),

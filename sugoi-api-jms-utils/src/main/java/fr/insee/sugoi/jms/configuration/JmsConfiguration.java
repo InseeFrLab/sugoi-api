@@ -17,6 +17,7 @@ import javax.jms.ConnectionFactory;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
@@ -48,6 +49,9 @@ public class JmsConfiguration {
   @Value("${fr.insee.sugoi.jms.broker.password:}")
   private String password;
 
+  @Value("${fr.insee.sugoi.jms.broker.timeout:}")
+  private Integer timeout;
+
   @Bean
   public ActiveMQConnectionFactory connectionFactory() {
     ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory();
@@ -64,10 +68,21 @@ public class JmsConfiguration {
   }
 
   @Bean
+  @Qualifier("asynchronous")
   public JmsTemplate getJmsTemplate() {
     JmsTemplate template = new JmsTemplate();
     template.setConnectionFactory(connectionFactory());
     template.setMessageConverter(messageConverter());
+    return template;
+  }
+
+  @Bean
+  @Qualifier("synchronous")
+  public JmsTemplate JmsTemplateWithTimeout() {
+    JmsTemplate template = new JmsTemplate();
+    template.setConnectionFactory(connectionFactory());
+    template.setMessageConverter(messageConverter());
+    template.setReceiveTimeout(timeout);
     return template;
   }
 

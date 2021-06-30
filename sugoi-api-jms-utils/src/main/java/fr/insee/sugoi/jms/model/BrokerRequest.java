@@ -16,25 +16,18 @@ package fr.insee.sugoi.jms.model;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class BrokerRequest implements Serializable {
 
-  /** */
-  private static final long serialVersionUID = 1L;
-
-  private UUID uuid;
   private String method;
   private Map<String, Object> methodParams = new HashMap<>();
 
   public BrokerRequest(String method, Map<String, Object> methodParams) {
     this.method = method;
-    uuid = UUID.randomUUID();
     this.methodParams = methodParams;
   }
 
   public BrokerRequest() {
-    uuid = UUID.randomUUID();
   }
 
   public String getMethod() {
@@ -53,22 +46,4 @@ public class BrokerRequest implements Serializable {
     this.methodParams.put(name, value);
   }
 
-  public UUID getUuid() {
-    return uuid;
-  }
-
-  public void setUuid(UUID uuid) {
-    this.uuid = uuid;
-  }
-
-  @Override
-  public String toString() {
-    return "{uuid: "
-        + uuid.toString()
-        + " method: "
-        + method
-        + " params: "
-        + methodParams.toString()
-        + "}";
-  }
 }

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.commons.services.controller.technics.SugoiAdviceController;
 import fr.insee.sugoi.core.exceptions.GroupAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.GroupNotFoundException;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.service.GroupService;
 import fr.insee.sugoi.model.Group;
 import fr.insee.sugoi.model.paging.PageResult;
@@ -157,7 +159,7 @@ public class GroupControllerTest {
               .with(csrf());
 
       mockMvc.perform(requestBuilder).andReturn();
-      verify(groupService).delete("domaine1", "monApplication", "supprimemoi");
+      verify(groupService).delete("domaine1", "monApplication", "supprimemoi", null);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -182,7 +184,8 @@ public class GroupControllerTest {
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      verify(groupService).update(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+      verify(groupService)
+          .update(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get updated group",
           objectMapper.readValue(response.getContentAsString(), Group.class).getDescription(),
@@ -204,8 +207,10 @@ public class GroupControllerTest {
   public void postShouldCallPostServiceAndReturnNewApp() {
 
     try {
-      Mockito.when(groupService.create(Mockito.anyString(), Mockito.any(), Mockito.any()))
-          .thenReturn(group1);
+      Mockito.when(
+              groupService.create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any()))
+          .thenReturn(
+              new ProviderResponse(group1.getName(), null, ProviderResponseStatus.OK, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post("/realms/domaine1/applications/monApplication/groups")
@@ -215,7 +220,8 @@ public class GroupControllerTest {
               .with(csrf());
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
-      verify(groupService).create(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+      verify(groupService)
+          .create(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get new group",
           objectMapper.readValue(response.getContentAsString(), Group.class).getName(),
@@ -260,8 +266,11 @@ public class GroupControllerTest {
   public void getObjectLocationInGroupCreationResponse() {
     try {
 
-      Mockito.when(groupService.create(Mockito.anyString(), Mockito.anyString(), Mockito.any()))
-          .thenReturn(group1);
+      Mockito.when(
+              groupService.create(
+                  Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any()))
+          .thenReturn(
+              new ProviderResponse(group1.getName(), null, ProviderResponseStatus.OK, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post("/realms/domaine1/applications/monApplication/groups")
@@ -352,7 +361,9 @@ public class GroupControllerTest {
   public void get409WhenCreatingAlreadyExistingGroup() {
     try {
 
-      Mockito.when(groupService.create(Mockito.anyString(), Mockito.anyString(), Mockito.any()))
+      Mockito.when(
+              groupService.create(
+                  Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any()))
           .thenThrow(new GroupAlreadyExistException(""));
 
       RequestBuilder requestBuilder =
@@ -427,7 +438,7 @@ public class GroupControllerTest {
 
       Mockito.doThrow(new GroupNotFoundException(""))
           .when(groupService)
-          .update(Mockito.anyString(), Mockito.any(), Mockito.any());
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/applications/monApplication/groups/Group1")
               .contentType(MediaType.APPLICATION_JSON)
@@ -453,7 +464,7 @@ public class GroupControllerTest {
 
       Mockito.doThrow(new GroupNotFoundException(""))
           .when(groupService)
-          .delete(Mockito.anyString(), Mockito.any(), Mockito.any());
+          .delete(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.delete(

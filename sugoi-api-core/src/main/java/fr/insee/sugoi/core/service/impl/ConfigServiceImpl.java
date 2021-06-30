@@ -16,9 +16,10 @@ package fr.insee.sugoi.core.service.impl;
 import fr.insee.sugoi.core.event.configuration.EventKeysConfig;
 import fr.insee.sugoi.core.event.model.SugoiEventTypeEnum;
 import fr.insee.sugoi.core.event.publisher.SugoiEventPublisher;
-import fr.insee.sugoi.core.exceptions.RealmAlreadyExistException;
-import fr.insee.sugoi.core.exceptions.RealmNotCreatedException;
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.ConfigService;
 import fr.insee.sugoi.model.Realm;
@@ -75,68 +76,60 @@ public class ConfigServiceImpl implements ConfigService {
   }
 
   @Override
-  public void deleteRealm(String realmName) {
+  public ProviderResponse deleteRealm(String realmName, ProviderRequest providerRequest) {
     try {
-      getRealm(realmName)
-          .orElseThrow(() -> new RealmNotFoundException("Realm " + realmName + " not found"));
-      realmProvider.deleteRealm(realmName);
+      ProviderResponse response = realmProvider.deleteRealm(realmName, providerRequest);
       sugoiEventPublisher.publishCustomEvent(null, null, SugoiEventTypeEnum.DELETE_REALM, null);
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           null,
           null,
           SugoiEventTypeEnum.DELETE_REALM_ERROR,
           Map.ofEntries(Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof RealmNotFoundException) {
-        throw (RealmNotFoundException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
   @Override
-  public void updateRealm(Realm realm) {
+  public ProviderResponse updateRealm(Realm realm, ProviderRequest providerRequest) {
     try {
       getRealm(realm.getName())
           .orElseThrow(() -> new RealmNotFoundException("Realm " + realm.getName() + " not found"));
-      realmProvider.updateRealm(realm);
+      ProviderResponse response = realmProvider.updateRealm(realm, providerRequest);
       sugoiEventPublisher.publishCustomEvent(null, null, SugoiEventTypeEnum.UPDATE_REALM, null);
+      if (!providerRequest.isAsynchronousAllowed()
+          && response.getStatus().equals(ProviderResponseStatus.OK)) {
+        response.setEntity(getRealm(realm.getName()).get());
+      }
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           null,
           null,
           SugoiEventTypeEnum.UPDATE_REALM_ERROR,
           Map.ofEntries(Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof RealmNotFoundException) {
-        throw (RealmNotFoundException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
   @Override
-  public void createRealm(Realm realm) {
+  public ProviderResponse createRealm(Realm realm, ProviderRequest providerRequest) {
     try {
-      if (getRealm(realm.getName()).isEmpty()) {
-        realmProvider.createRealm(realm);
-        sugoiEventPublisher.publishCustomEvent(null, null, SugoiEventTypeEnum.CREATE_REALM, null);
+      ProviderResponse response = realmProvider.createRealm(realm, providerRequest);
+      sugoiEventPublisher.publishCustomEvent(null, null, SugoiEventTypeEnum.CREATE_REALM, null);
+      if (!providerRequest.isAsynchronousAllowed()
+          && response.getStatus().equals(ProviderResponseStatus.OK)) {
+        response.setEntity(getRealm(realm.getName()).get());
       }
-      throw new RealmAlreadyExistException("Realm " + realm.getName() + "already exist");
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           null,
           null,
           SugoiEventTypeEnum.CREATE_REALM_ERROR,
           Map.ofEntries(Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof RealmAlreadyExistException) {
-        throw (RealmAlreadyExistException) e;
-      } else if (e instanceof RealmNotCreatedException) {
-        throw (RealmNotCreatedException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 }

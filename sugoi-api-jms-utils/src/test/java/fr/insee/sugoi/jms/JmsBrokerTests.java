@@ -61,8 +61,8 @@ public class JmsBrokerTests {
                   throws JMSException {
                 List<TextMessage> messages = new ArrayList<>();
                 Map<String, Object> params = new HashMap<>();
-                jmsWriter.writeRequestInQueue("queue.Tests", "toto", params);
-                jmsWriter.writeRequestInQueue("queue.Tests2", "tato", params);
+                jmsWriter.writeRequestInQueueSynchronous("queue.Tests", "toto", params);
+                jmsWriter.writeRequestInQueueSynchronous("queue.Tests2", "tato", params);
                 Enumeration<Message> e = qb.getEnumeration();
                 while (e.hasMoreElements()) {
                   final Message m = e.nextElement();

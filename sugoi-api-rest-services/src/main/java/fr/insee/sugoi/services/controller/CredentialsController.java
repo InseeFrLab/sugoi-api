@@ -15,11 +15,15 @@ package fr.insee.sugoi.services.controller;
 
 import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.CredentialsService;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.User;
 import fr.insee.sugoi.model.paging.PasswordChangeRequest;
 import fr.insee.sugoi.model.paging.SendMode;
+import fr.insee.sugoi.services.Utils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,15 +34,19 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -69,7 +77,7 @@ public class CredentialsController {
             content = {@Content(mediaType = "application/json")})
       })
   @PreAuthorize("@NewAuthorizeMethodDecider.isPasswordManager(#realm,#storage)")
-  public ResponseEntity<Void> reinitPassword(
+  public ResponseEntity<ProviderResponse> reinitPassword(
       @Parameter(description = "Password change request&", required = true) @RequestBody
           PasswordChangeRequest pcr,
       @Parameter(
@@ -86,11 +94,39 @@ public class CredentialsController {
           String id,
       @Parameter(description = "Way to send password", required = false)
           @RequestParam(value = "sendModes", required = false)
-          List<SendMode> sendMode) {
+          List<SendMode> sendMode,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
-    credentialsService.reinitPassword(
-        realm, userStorage, id, pcr, sendMode != null ? sendMode : new ArrayList<>());
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    ProviderResponse response =
+        credentialsService.reinitPassword(
+            realm,
+            userStorage,
+            id,
+            pcr,
+            sendMode != null ? sendMode : new ArrayList<>(),
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                null,
+                isUrgent));
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .build();
   }
 
   @PostMapping(path = {"/realms/{realm}/users/{id}/reinitPassword"})
@@ -107,7 +143,7 @@ public class CredentialsController {
             content = {@Content(mediaType = "application/json")})
       })
   @PreAuthorize("@NewAuthorizeMethodDecider.isPasswordManager(#realm,#storage)")
-  public ResponseEntity<Void> reinitPassword(
+  public ResponseEntity<ProviderResponse> reinitPassword(
       @Parameter(description = "Password change request&", required = true) @RequestBody
           PasswordChangeRequest pcr,
       @Parameter(
@@ -119,7 +155,17 @@ public class CredentialsController {
           String id,
       @Parameter(description = "Way to send password", required = false)
           @RequestParam(value = "sendModes", required = false)
-          List<SendMode> sendMode) {
+          List<SendMode> sendMode,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
     User user =
         userService
@@ -127,7 +173,15 @@ public class CredentialsController {
             .orElseThrow(
                 () -> new UserNotFoundException("Cannot find user " + id + " in realm " + realm));
     return reinitPassword(
-        pcr, realm, (String) user.getMetadatas().get(GlobalKeysConfig.USERSTORAGE), id, sendMode);
+        pcr,
+        realm,
+        (String) user.getMetadatas().get(GlobalKeysConfig.USERSTORAGE),
+        id,
+        sendMode,
+        isAsynchronous,
+        isUrgent,
+        transactionId,
+        authentication);
   }
 
   @PostMapping(path = {"/realms/{realm}/storages/{storage}/users/{id}/changePassword"})
@@ -144,7 +198,7 @@ public class CredentialsController {
             content = {@Content(mediaType = "application/json")})
       })
   @PreAuthorize("@NewAuthorizeMethodDecider.isPasswordManager(#realm,#storage)")
-  public ResponseEntity<Void> changePassword(
+  public ResponseEntity<ProviderResponse> changePassword(
       @Parameter(description = "Password change request", required = true) @RequestBody
           PasswordChangeRequest pcr,
       @Parameter(
@@ -158,10 +212,38 @@ public class CredentialsController {
           @PathVariable(value = "storage", required = true)
           String userStorage,
       @Parameter(description = "User's id to change password", required = true) @PathVariable("id")
-          String id) {
+          String id,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
-    credentialsService.changePassword(realm, userStorage, id, pcr);
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    ProviderResponse response =
+        credentialsService.changePassword(
+            realm,
+            userStorage,
+            id,
+            pcr,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                null,
+                isUrgent));
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .build();
   }
 
   @PostMapping(path = {"/realms/{realm}/users/{id}/changePassword"})
@@ -178,7 +260,7 @@ public class CredentialsController {
             content = {@Content(mediaType = "application/json")})
       })
   @PreAuthorize("@NewAuthorizeMethodDecider.isPasswordManager(#realm,#storage)")
-  public ResponseEntity<Void> changePassword(
+  public ResponseEntity<ProviderResponse> changePassword(
       @Parameter(description = "Password change request&", required = true) @RequestBody
           PasswordChangeRequest pcr,
       @Parameter(
@@ -187,7 +269,17 @@ public class CredentialsController {
           @PathVariable("realm")
           String realm,
       @Parameter(description = "User's id to change password", required = true) @PathVariable("id")
-          String id) {
+          String id,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
     User user =
         userService
@@ -195,7 +287,13 @@ public class CredentialsController {
             .orElseThrow(
                 () -> new UserNotFoundException("Cannot find user " + id + " in realm " + realm));
     return changePassword(
-        pcr, realm, (String) user.getMetadatas().get(GlobalKeysConfig.USERSTORAGE), id);
+        pcr,
+        realm,
+        (String) user.getMetadatas().get(GlobalKeysConfig.USERSTORAGE),
+        isAsynchronous,
+        isUrgent,
+        id,
+        authentication);
   }
 
   @PostMapping(path = {"/realms/{realm}/storages/{storage}/users/{id}/initPassword"})
@@ -212,7 +310,7 @@ public class CredentialsController {
             description = "Something went wrong",
             content = {@Content(mediaType = "application/json")})
       })
-  public ResponseEntity<Void> initPassword(
+  public ResponseEntity<ProviderResponse> initPassword(
       @Parameter(
               description = "Name of the realm where the operation will be made",
               required = true)
@@ -230,11 +328,39 @@ public class CredentialsController {
           PasswordChangeRequest pcr,
       @Parameter(description = "Way to send password", required = false)
           @RequestParam(value = "sendModes", required = false)
-          List<SendMode> sendMode) {
+          List<SendMode> sendMode,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
-    credentialsService.initPassword(
-        realm, userStorage, id, pcr, sendMode != null ? sendMode : new ArrayList<>());
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    ProviderResponse response =
+        credentialsService.initPassword(
+            realm,
+            userStorage,
+            id,
+            pcr,
+            sendMode != null ? sendMode : new ArrayList<>(),
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                null,
+                isUrgent));
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .build();
   }
 
   @PostMapping(path = {"/realms/{realm}/users/{id}/initPassword"})
@@ -251,7 +377,7 @@ public class CredentialsController {
             description = "Something went wrong",
             content = {@Content(mediaType = "application/json")})
       })
-  public ResponseEntity<Void> initPassword(
+  public ResponseEntity<ProviderResponse> initPassword(
       @Parameter(
               description = "Name of the realm where the operation will be made",
               required = true)
@@ -264,7 +390,17 @@ public class CredentialsController {
           PasswordChangeRequest pcr,
       @Parameter(description = "Way to send password", required = false)
           @RequestParam(value = "sendModes", required = false)
-          List<SendMode> sendMode) {
+          List<SendMode> sendMode,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
     User user =
         userService
@@ -272,7 +408,15 @@ public class CredentialsController {
             .orElseThrow(
                 () -> new UserNotFoundException("Cannot find user " + id + " in realm " + realm));
     return initPassword(
-        realm, (String) user.getMetadatas().get(GlobalKeysConfig.USERSTORAGE), id, pcr, sendMode);
+        realm,
+        (String) user.getMetadatas().get(GlobalKeysConfig.USERSTORAGE),
+        id,
+        pcr,
+        sendMode,
+        isAsynchronous,
+        isUrgent,
+        transactionId,
+        authentication);
   }
 
   @PostMapping(

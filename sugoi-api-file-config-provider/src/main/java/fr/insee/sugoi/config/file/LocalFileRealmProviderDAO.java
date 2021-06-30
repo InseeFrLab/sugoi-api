@@ -16,6 +16,9 @@ package fr.insee.sugoi.config.file;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.model.Realm;
 import java.io.FileWriter;
@@ -88,13 +91,17 @@ public class LocalFileRealmProviderDAO implements RealmProvider {
   }
 
   @Override
-  public void createRealm(Realm realm) {
+  public ProviderResponse createRealm(Realm realm, ProviderRequest providerRequest) {
     realms.add(realm);
     overwriteConfig(realms);
+    ProviderResponse response = new ProviderResponse();
+    response.setStatus(ProviderResponseStatus.OK);
+    response.setEntityId(realm.getName());
+    return response;
   }
 
   @Override
-  public void updateRealm(Realm realm) {
+  public ProviderResponse updateRealm(Realm realm, ProviderRequest providerRequest) {
     Realm realmToModify =
         realms.stream()
             .filter(r -> r.getName().equalsIgnoreCase(realm.getName()))
@@ -103,14 +110,22 @@ public class LocalFileRealmProviderDAO implements RealmProvider {
     if (realmToModify != null) {
       realmToModify = realm;
     }
+    ProviderResponse response = new ProviderResponse();
+    response.setStatus(ProviderResponseStatus.OK);
+    response.setEntityId(realm.getName());
+    return response;
   }
 
   @Override
-  public void deleteRealm(String realmName) {
+  public ProviderResponse deleteRealm(String realmName, ProviderRequest providerRequest) {
     overwriteConfig(
         realms.stream()
             .filter(realm -> !realm.getName().equalsIgnoreCase(realmName))
             .collect(Collectors.toList()));
+    ProviderResponse response = new ProviderResponse();
+    response.setStatus(ProviderResponseStatus.OK);
+    response.setEntityId(realmName);
+    return response;
   }
 
   private void overwriteConfig(List<Realm> realmsToWrite) {

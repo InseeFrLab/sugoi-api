@@ -16,6 +16,8 @@ package fr.insee.sugoi.core.service;
 import fr.insee.sugoi.core.exceptions.RealmAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.RealmNotCreatedException;
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Realm;
 import java.util.List;
 import java.util.Optional;
@@ -43,14 +45,14 @@ public interface ConfigService {
    *
    * @throws RealmNotFoundException if realmName doesn't match with the name of an existing realm
    */
-  void deleteRealm(String realmName);
+  ProviderResponse deleteRealm(String realmName, ProviderRequest providerRequest);
 
   /**
    * [NotYetImplemented] Check if the realm exists and update realm
    *
    * @throws RealmNotFoundException if realm doesn't match (by name) with an existing realm
    */
-  void updateRealm(Realm realm);
+  ProviderResponse updateRealm(Realm realm, ProviderRequest providerRequest);
 
   /**
    * [NotYetImplemented] Check if a realm with the same name already exists, and creates it if it
@@ -59,5 +61,5 @@ public interface ConfigService {
    * @throws RealmAlreadyExistException if realm already exists
    * @throws RealmNotCreatedException if fail to create realm
    */
-  void createRealm(Realm realm);
+  ProviderResponse createRealm(Realm realm, ProviderRequest providerRequest);
 }

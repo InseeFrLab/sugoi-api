@@ -13,9 +13,10 @@
 */
 package fr.insee.sugoi.model.paging;
 
+import java.io.Serializable;
 import java.util.Map;
 
-public class PasswordChangeRequest {
+public class PasswordChangeRequest implements Serializable{
 
   private String email;
   private Map<String, String> address;

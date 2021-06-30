@@ -79,6 +79,8 @@ public class LdapStoreBeans {
 
   public Map<String, String> generateConfig(Realm realm, UserStorage userStorage) {
     Map<String, String> config = new HashMap<>();
+    config.put(LdapConfigKeys.REALM_NAME, realm.getName());
+    config.put(LdapConfigKeys.USERSTORAGE_NAME, userStorage.getName());
     config.put(
         LdapConfigKeys.NAME,
         userStorage.getName() != null ? userStorage.getName() : realm.getName());

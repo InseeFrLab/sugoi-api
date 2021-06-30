@@ -48,4 +48,6 @@ public class JmsAtttributes {
 
   public static final String ATTRIBUTE_KEY = "attributeKey";
   public static final String ATTRIBUTE_VALUE = "attributeValue";
+
+  public static final String PROVIDER_REQUEST = "providerRequest";
 }

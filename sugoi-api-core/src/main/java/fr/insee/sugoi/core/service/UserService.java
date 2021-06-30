@@ -16,6 +16,8 @@ package fr.insee.sugoi.core.service;
 import fr.insee.sugoi.core.exceptions.UserAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.UserNotCreatedException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.User;
 import fr.insee.sugoi.model.paging.PageResult;
 import fr.insee.sugoi.model.paging.PageableResult;
@@ -34,7 +36,7 @@ public interface UserService {
    * @throws UserAlreadyExistException if an user with the same username already exist in the realm
    * @throws UserNotCreatedException if user is not found after create
    */
-  User create(String realm, String storage, User user);
+  ProviderResponse create(String realm, String storage, User user, ProviderRequest providerRequest);
 
   /**
    * Update the user if the user already exists in the realm
@@ -44,7 +46,7 @@ public interface UserService {
    * @param user
    * @throws UserNotFoundException if user is not found in the realm
    */
-  void update(String realm, String storage, User user);
+  ProviderResponse update(String realm, String storage, User user, ProviderRequest providerRequest);
 
   /**
    * Delete an existing user (if the user already exists in the realm)
@@ -54,7 +56,7 @@ public interface UserService {
    * @param id
    * @throws UserNotFoundException if user is not found in the realm
    */
-  void delete(String realm, String storage, String id);
+  ProviderResponse delete(String realm, String storage, String id, ProviderRequest providerRequest);
 
   /**
    * Find a user by its username in a realm
@@ -93,8 +95,13 @@ public interface UserService {
    * @param userId
    * @param attribute
    */
-  void addAppManagedAttribute(
-      String realm, String storage, String userId, String attributeKey, String attribute);
+  ProviderResponse addAppManagedAttribute(
+      String realm,
+      String storage,
+      String userId,
+      String attributeKey,
+      String attribute,
+      ProviderRequest providerRequest);
 
   /**
    * Allow to delete only app-managed attribute of an user, this attribute must follow the
@@ -106,6 +113,11 @@ public interface UserService {
    * @param userId
    * @param attribute
    */
-  void deleteAppManagedAttribute(
-      String realm, String storage, String userId, String attributeKey, String attribute);
+  ProviderResponse deleteAppManagedAttribute(
+      String realm,
+      String storage,
+      String userId,
+      String attributeKey,
+      String attribute,
+      ProviderRequest providerRequest);
 }

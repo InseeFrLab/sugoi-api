@@ -17,9 +17,10 @@ import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
 import fr.insee.sugoi.core.event.configuration.EventKeysConfig;
 import fr.insee.sugoi.core.event.model.SugoiEventTypeEnum;
 import fr.insee.sugoi.core.event.publisher.SugoiEventPublisher;
-import fr.insee.sugoi.core.exceptions.UserAlreadyExistException;
-import fr.insee.sugoi.core.exceptions.UserNotCreatedException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.seealso.SeeAlsoService;
 import fr.insee.sugoi.core.service.UserService;
@@ -55,25 +56,25 @@ public class UserServiceImpl implements UserService {
   protected static final Logger logger = LogManager.getLogger(UserServiceImpl.class);
 
   @Override
-  public User create(String realm, String storage, User user) {
+  public ProviderResponse create(
+      String realm, String storage, User user, ProviderRequest providerRequest) {
     try {
+      ProviderResponse response =
+          storeProvider.getWriterStore(realm, storage).createUser(user, providerRequest);
+      sugoiEventPublisher.publishCustomEvent(
+          realm,
+          storage,
+          SugoiEventTypeEnum.CREATE_USER,
+          Map.ofEntries(Map.entry(EventKeysConfig.USER, user)));
 
-      if (findById(realm, storage, user.getUsername()).isEmpty()) {
-        String userName =
-            storeProvider.getWriterStore(realm, storage).createUser(user).getUsername();
-        sugoiEventPublisher.publishCustomEvent(
-            realm,
-            storage,
-            SugoiEventTypeEnum.CREATE_USER,
-            Map.ofEntries(Map.entry(EventKeysConfig.USER, user)));
-        return findById(realm, storage, userName)
-            .orElseThrow(
-                () ->
-                    new UserNotCreatedException(
-                        "Cannot create user " + userName + " in realm " + realm));
+      // TODO Must be done here because at the provider level we doesn't have the
+      // readerstore
+      if (!providerRequest.isAsynchronousAllowed()
+          && response.getStatus().equals(ProviderResponseStatus.OK)) {
+        response.setEntity(findById(realm, storage, user.getUsername()).get());
       }
-      throw new UserAlreadyExistException(
-          "User " + user.getUsername() + " already exist in realm " + realm);
+
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,
@@ -82,32 +83,27 @@ public class UserServiceImpl implements UserService {
           Map.ofEntries(
               Map.entry(EventKeysConfig.USER, user),
               Map.entry(EventKeysConfig.ERROR, e.toString())));
-
-      if (e instanceof UserAlreadyExistException) {
-        throw (UserAlreadyExistException) e;
-      } else if (e instanceof UserNotCreatedException) {
-        throw (UserNotCreatedException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
   @Override
-  public void update(String realm, String storage, User user) {
+  public ProviderResponse update(
+      String realm, String storage, User user, ProviderRequest providerRequest) {
 
     try {
-      findById(realm, storage, user.getUsername())
-          .orElseThrow(
-              () ->
-                  new UserNotFoundException(
-                      "Cannot find user " + user.getUsername() + " in realm " + realm));
-      storeProvider.getWriterStore(realm, storage).updateUser(user);
+      ProviderResponse response =
+          storeProvider.getWriterStore(realm, storage).updateUser(user, providerRequest);
       sugoiEventPublisher.publishCustomEvent(
           realm,
           storage,
           SugoiEventTypeEnum.UPDATE_USER,
           Map.ofEntries(Map.entry(EventKeysConfig.USER, user)));
+      if (!providerRequest.isAsynchronousAllowed()
+          && response.getStatus().equals(ProviderResponseStatus.OK)) {
+        response.setEntity(findById(realm, storage, user.getUsername()).get());
+      }
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,
@@ -116,26 +112,22 @@ public class UserServiceImpl implements UserService {
           Map.ofEntries(
               Map.entry(EventKeysConfig.USER, user),
               Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof UserNotFoundException) {
-        throw (UserNotFoundException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
   @Override
-  public void delete(String realmName, String storage, String id) {
+  public ProviderResponse delete(
+      String realmName, String storage, String id, ProviderRequest providerRequest) {
     try {
-      findById(realmName, storage, id)
-          .orElseThrow(
-              () -> new UserNotFoundException("Cannot find user " + id + " in realm " + realmName));
-      storeProvider.getWriterStore(realmName, storage).deleteUser(id);
+      ProviderResponse response =
+          storeProvider.getWriterStore(realmName, storage).deleteUser(id, providerRequest);
       sugoiEventPublisher.publishCustomEvent(
           realmName,
           storage,
           SugoiEventTypeEnum.DELETE_USER,
           Map.ofEntries(Map.entry(EventKeysConfig.USER_ID, id)));
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realmName,
@@ -306,15 +298,18 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public void addAppManagedAttribute(
-      String realm, String storage, String userId, String attributeKey, String attribute) {
+  public ProviderResponse addAppManagedAttribute(
+      String realm,
+      String storage,
+      String userId,
+      String attributeKey,
+      String attribute,
+      ProviderRequest providerRequest) {
     try {
-      findById(realm, storage, userId)
-          .orElseThrow(
-              () -> new UserNotFoundException("Cannot find user " + userId + " in realm " + realm));
-      storeProvider
-          .getWriterStore(realm, storage)
-          .addAppManagedAttribute(userId, attributeKey, attribute);
+      ProviderResponse response =
+          storeProvider
+              .getWriterStore(realm, storage)
+              .addAppManagedAttribute(userId, attributeKey, attribute, providerRequest);
       sugoiEventPublisher.publishCustomEvent(
           realm,
           storage,
@@ -323,6 +318,7 @@ public class UserServiceImpl implements UserService {
               Map.entry(EventKeysConfig.ATTRIBUTE_KEY, attributeKey),
               Map.entry(EventKeysConfig.ATTRIBUTE_VALUE, attribute),
               Map.entry(EventKeysConfig.USER_ID, userId)));
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,
@@ -338,15 +334,18 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public void deleteAppManagedAttribute(
-      String realm, String storage, String userId, String attributeKey, String attribute) {
+  public ProviderResponse deleteAppManagedAttribute(
+      String realm,
+      String storage,
+      String userId,
+      String attributeKey,
+      String attribute,
+      ProviderRequest providerRequest) {
     try {
-      findById(realm, storage, userId)
-          .orElseThrow(
-              () -> new UserNotFoundException("Cannot find user " + userId + " in realm " + realm));
-      storeProvider
-          .getWriterStore(realm, storage)
-          .deleteAppManagedAttribute(userId, attributeKey, attribute);
+      ProviderResponse response =
+          storeProvider
+              .getWriterStore(realm, storage)
+              .deleteAppManagedAttribute(userId, attributeKey, attribute, providerRequest);
       sugoiEventPublisher.publishCustomEvent(
           realm,
           storage,
@@ -355,6 +354,7 @@ public class UserServiceImpl implements UserService {
               Map.entry(EventKeysConfig.ATTRIBUTE_KEY, attributeKey),
               Map.entry(EventKeysConfig.ATTRIBUTE_VALUE, attribute),
               Map.entry(EventKeysConfig.USER_ID, userId)));
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,

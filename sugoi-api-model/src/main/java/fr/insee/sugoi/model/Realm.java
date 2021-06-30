@@ -13,11 +13,12 @@
 */
 package fr.insee.sugoi.model;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Realm {
+public class Realm implements Serializable{
   private String name;
   private String url;
   private String appSource;

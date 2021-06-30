@@ -13,23 +13,27 @@
 */
 package fr.insee.sugoi.jms.listener;
 
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.jms.model.BrokerRequest;
+import fr.insee.sugoi.jms.model.BrokerResponse;
+
+import org.apache.activemq.command.ActiveMQObjectMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jms.annotation.JmsListener;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(
-    name = "fr.insee.sugoi.jms.receiver.request.enabled",
-    havingValue = "true",
-    matchIfMissing = false)
+@ConditionalOnProperty(name = "fr.insee.sugoi.jms.receiver.request.enabled", havingValue = "true", matchIfMissing = false)
 public class JmsReceiverRequest {
 
-  @Autowired JmsRequestRouter router;
+  @Autowired
+  JmsRequestRouter router;
 
   private static final Logger logger = LogManager.getLogger(JmsReceiverRequest.class);
 
@@ -39,21 +43,38 @@ public class JmsReceiverRequest {
   @Value("${fr.insee.sugoi.jms.queue.requests.name:}")
   private String queueUrgentRequestName;
 
-  @JmsListener(
-      destination = "${fr.insee.sugoi.jms.queue.requests.name:}",
-      containerFactory = "myFactory")
-  public void onRequest(BrokerRequest request) throws Exception {
-    logger.debug(
-        "New message with uuid {} on queue {} message: {}",
-        request.getUuid(),
-        queueRequestName,
-        request);
-    router.exec(request);
+  @Value("${fr.insee.sugoi.jms.queue.response.name:}")
+  private String queueResponseName;
+
+  @Value("${fr.insee.sugoi.jms.queue.response.name:}")
+  private String queueUrgentResponseName;
+
+  @Autowired
+  @Qualifier("asynchronous")
+  JmsTemplate jmsTemplate;
+
+  @JmsListener(destination = "${fr.insee.sugoi.jms.queue.requests.name:}", containerFactory = "myFactory")
+  public void onRequest(ActiveMQObjectMessage ac) throws Exception {
+    logger.debug("New message with correlactionId {} on queue {} message: {}", ac.getJMSCorrelationID(),
+        queueRequestName, ac.getObject());
+    ProviderResponse response = router.exec((BrokerRequest) ac.getObject());
+    BrokerResponse br = new BrokerResponse();
+    br.setProviderResponse(response);
+    ActiveMQObjectMessage acr = new ActiveMQObjectMessage();
+    ac.setJMSCorrelationID(ac.getJMSCorrelationID());
+    acr.setObject(br);
+    jmsTemplate.convertAndSend(queueResponseName, acr);
   }
 
   @JmsListener(destination = "${fr.insee.sugoi.jms.priority.queue.request.name:}")
-  public void onUrgentRequest(BrokerRequest request) throws Exception {
-    logger.debug("New message on queue {} message: {}", queueUrgentRequestName, request);
-    router.exec(request);
+  public void onUrgentRequest(ActiveMQObjectMessage ac) throws Exception {
+    logger.debug("New message with correlactionId {} on queue {} message: {}", queueUrgentRequestName, ac.getObject());
+    ProviderResponse response = router.exec((BrokerRequest) ac.getObject());
+    BrokerResponse br = new BrokerResponse();
+    br.setProviderResponse(response);
+    ActiveMQObjectMessage acr = new ActiveMQObjectMessage();
+    acr.setObject(br);
+    acr.setJMSCorrelationID(ac.getJMSCorrelationID());
+    jmsTemplate.convertAndSend(queueUrgentResponseName, acr);
   }
 }

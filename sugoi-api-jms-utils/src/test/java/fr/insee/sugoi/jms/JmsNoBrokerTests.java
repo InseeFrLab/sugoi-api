@@ -38,7 +38,7 @@ public class JmsNoBrokerTests {
         BrokerException.class,
         () -> {
           Map<String, Object> params = new HashMap<>();
-          jmsWriter.writeRequestInQueue("queueTests", "toto", params);
+          jmsWriter.writeRequestInQueueSynchronous("queueTests", "toto", params);
         });
   }
 }

@@ -16,6 +16,8 @@ package fr.insee.sugoi.core.service;
 import fr.insee.sugoi.core.exceptions.OrganizationAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.OrganizationNotCreatedException;
 import fr.insee.sugoi.core.exceptions.OrganizationNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Organization;
 import fr.insee.sugoi.model.paging.PageResult;
 import fr.insee.sugoi.model.paging.PageableResult;
@@ -34,7 +36,8 @@ public interface OrganizationService {
    * @throws OrganizationAlreadyExistException if an organization with the same name already exist
    * @throws OrganizationNotCreatedException if the organization is not found after create
    */
-  Organization create(String realm, String storage, Organization organization);
+  ProviderResponse create(
+      String realm, String storage, Organization organization, ProviderRequest providerRequest);
 
   /**
    * Check if the organization exists in the realm (by name) and delete it if it exists
@@ -44,7 +47,7 @@ public interface OrganizationService {
    * @param id
    * @throws OrganizationNotFoundException if the organization is not found
    */
-  void delete(String realm, String storage, String id);
+  ProviderResponse delete(String realm, String storage, String id, ProviderRequest providerRequest);
 
   /**
    * Find an organization by its name in the realm
@@ -81,5 +84,6 @@ public interface OrganizationService {
    * @param organization
    * @throws OrganizationNotFoundException if the organization is not found
    */
-  void update(String realm, String storage, Organization organization);
+  ProviderResponse update(
+      String realm, String storage, Organization organization, ProviderRequest providerRequest);
 }

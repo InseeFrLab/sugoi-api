@@ -13,47 +13,35 @@
 */
 package fr.insee.sugoi.jms.model;
 
-import java.util.UUID;
+import java.io.Serializable;
 
-/** BrokerResponse */
-public class BrokerResponse {
+import org.apache.activemq.command.ActiveMQMessage;
+
+import fr.insee.sugoi.core.model.ProviderResponse;
+
+public class BrokerResponse extends ActiveMQMessage implements Serializable {
 
   private String comment;
 
-  private Object object;
-
-  private UUID uuid;
+  private ProviderResponse providerResponse;
 
   public BrokerResponse() {
-    uuid = UUID.randomUUID();
   }
 
   public String getComment() {
     return comment;
   }
 
-  public Object getObject() {
-    return object;
-  }
-
   public void setComment(String comment) {
     this.comment = comment;
   }
 
-  public void setObject(Object object) {
-    this.object = object;
+  public ProviderResponse getProviderResponse() {
+    return providerResponse;
   }
 
-  public UUID getUuid() {
-    return uuid;
+  public void setProviderResponse(ProviderResponse providerResponse) {
+    this.providerResponse = providerResponse;
   }
 
-  public void setUuid(UUID uuid) {
-    this.uuid = uuid;
-  }
-
-  @Override
-  public String toString() {
-    return "{uuid: " + uuid.toString() + " comment: " + comment + "}";
-  }
 }

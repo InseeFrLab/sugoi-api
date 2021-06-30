@@ -15,6 +15,9 @@ package fr.insee.sugoi.store.file;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.store.WriterStore;
 import fr.insee.sugoi.model.Application;
 import fr.insee.sugoi.model.Group;
@@ -47,15 +50,21 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public void deleteUser(String id) {
+  public ProviderResponse deleteUser(String id, ProviderRequest providerRequest) {
     fileReaderStore.setResourceLoader(resourceLoader);
     User user = fileReaderStore.getUser(id);
-    user.getGroups().forEach(group -> deleteUserFromGroup(group.getAppName(), group.getName(), id));
+    user.getGroups()
+        .forEach(
+            group -> deleteUserFromGroup(group.getAppName(), group.getName(), id, providerRequest));
     deleteResourceFile(config.get(FileKeysConfig.USER_SOURCE), id);
+    ProviderResponse response = new ProviderResponse();
+    response.setEntityId(id);
+    response.setStatus(ProviderResponseStatus.OK);
+    return response;
   }
 
   @Override
-  public User createUser(User user) {
+  public ProviderResponse createUser(User user, ProviderRequest providerRequest) {
     try {
       createResourceFile(
           config.get(FileKeysConfig.USER_SOURCE),
@@ -64,36 +73,48 @@ public class FileWriterStore implements WriterStore {
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Error mapping user" + user.getUsername(), e);
     }
-    return user;
+    ProviderResponse response = new ProviderResponse();
+    response.setEntityId(user.getUsername());
+    response.setStatus(ProviderResponseStatus.OK);
+    return response;
   }
 
   @Override
-  public User updateUser(User updatedUser) {
+  public ProviderResponse updateUser(User updatedUser, ProviderRequest providerRequest) {
     try {
       updateResourceFile(
           config.get(FileKeysConfig.USER_SOURCE),
           updatedUser.getUsername(),
           mapper.writeValueAsString(updatedUser));
-      return updatedUser;
+      ProviderResponse response = new ProviderResponse();
+      response.setEntityId(updatedUser.getUsername());
+      response.setStatus(ProviderResponseStatus.OK);
+      return response;
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Error mapping user" + updatedUser.getUsername(), e);
     }
   }
 
   @Override
-  public void deleteGroup(String appName, String groupName) {
+  public ProviderResponse deleteGroup(
+      String appName, String groupName, ProviderRequest providerRequest) {
     fileReaderStore.setResourceLoader(resourceLoader);
     Application application = fileReaderStore.getApplication(appName);
     if (application != null) {
       application.getGroups().removeIf(group -> group.getName().equalsIgnoreCase(groupName));
-      updateApplication(application);
+      updateApplication(application, providerRequest);
+      ProviderResponse response = new ProviderResponse();
+      response.setEntityId(appName);
+      response.setStatus(ProviderResponseStatus.OK);
+      return response;
     } else {
       throw new RuntimeException("Application " + appName + " doesn't exist");
     }
   }
 
   @Override
-  public Group createGroup(String appName, Group appGroup) {
+  public ProviderResponse createGroup(
+      String appName, Group appGroup, ProviderRequest providerRequest) {
     fileReaderStore.setResourceLoader(resourceLoader);
     Application application = fileReaderStore.getApplication(appName);
     if (application != null) {
@@ -104,8 +125,11 @@ public class FileWriterStore implements WriterStore {
           .anyMatch(group -> group.getName().equalsIgnoreCase(appGroup.getName()))) {
         appGroup.setAppName(appName);
         application.getGroups().add(appGroup);
-        updateApplication(application);
-        return appGroup;
+        updateApplication(application, providerRequest);
+        ProviderResponse response = new ProviderResponse();
+        response.setEntityId(appGroup.getName());
+        response.setStatus(ProviderResponseStatus.OK);
+        return response;
       } else {
         throw new RuntimeException("Group " + appGroup.getName() + " already exists in " + appName);
       }
@@ -115,7 +139,8 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public Group updateGroup(String appName, Group updatedGroup) {
+  public ProviderResponse updateGroup(
+      String appName, Group updatedGroup, ProviderRequest providerRequest) {
     fileReaderStore.setResourceLoader(resourceLoader);
     Application application = fileReaderStore.getApplication(appName);
     if (application != null) {
@@ -129,9 +154,11 @@ public class FileWriterStore implements WriterStore {
             .removeIf(
                 filterGroup -> filterGroup.getName().equalsIgnoreCase(updatedGroup.getName()));
         application.getGroups().add(updatedGroup);
-        updateApplication(application);
-
-        return updatedGroup;
+        updateApplication(application, providerRequest);
+        ProviderResponse response = new ProviderResponse();
+        response.setEntityId(updatedGroup.getName());
+        response.setStatus(ProviderResponseStatus.OK);
+        return response;
       } else {
         throw new RuntimeException(
             "Group " + updatedGroup.getName() + " doesn't exist in " + appName);
@@ -142,9 +169,13 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public void deleteOrganization(String name) {
+  public ProviderResponse deleteOrganization(String name, ProviderRequest providerRequest) {
     if (config.get(FileKeysConfig.ORGANIZATION_SOURCE) != null) {
       deleteResourceFile(config.get(FileKeysConfig.ORGANIZATION_SOURCE), name);
+      ProviderResponse response = new ProviderResponse();
+      response.setEntityId(name);
+      response.setStatus(ProviderResponseStatus.OK);
+      return response;
     } else {
       throw new UnsupportedOperationException(
           "organizations feature not configured for this storage");
@@ -152,7 +183,8 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public Organization createOrganization(Organization organization) {
+  public ProviderResponse createOrganization(
+      Organization organization, ProviderRequest providerRequest) {
     if (config.get(FileKeysConfig.ORGANIZATION_SOURCE) != null) {
       try {
         createResourceFile(
@@ -163,7 +195,10 @@ public class FileWriterStore implements WriterStore {
         throw new RuntimeException(
             "Error mapping organization " + organization.getIdentifiant(), e);
       }
-      return organization;
+      ProviderResponse response = new ProviderResponse();
+      response.setEntityId(organization.getIdentifiant());
+      response.setStatus(ProviderResponseStatus.OK);
+      return response;
     } else {
       throw new UnsupportedOperationException(
           "organizations feature not configured for this storage");
@@ -171,14 +206,18 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public Organization updateOrganization(Organization updatedOrganization) {
+  public ProviderResponse updateOrganization(
+      Organization updatedOrganization, ProviderRequest providerRequest) {
     if (config.get(FileKeysConfig.ORGANIZATION_SOURCE) != null) {
       try {
         updateResourceFile(
             config.get(FileKeysConfig.ORGANIZATION_SOURCE),
             updatedOrganization.getIdentifiant(),
             mapper.writeValueAsString(updatedOrganization));
-        return updatedOrganization;
+        ProviderResponse response = new ProviderResponse();
+        response.setEntityId(updatedOrganization.getIdentifiant());
+        response.setStatus(ProviderResponseStatus.OK);
+        return response;
       } catch (JsonProcessingException e) {
         throw new RuntimeException(
             "Error mapping organization" + updatedOrganization.getIdentifiant(), e);
@@ -191,7 +230,8 @@ public class FileWriterStore implements WriterStore {
 
   /** Group membership information is removed from the user object and from the group object */
   @Override
-  public void deleteUserFromGroup(String appName, String groupName, String userId) {
+  public ProviderResponse deleteUserFromGroup(
+      String appName, String groupName, String userId, ProviderRequest providerRequest) {
     fileReaderStore.setResourceLoader(resourceLoader);
     Application application = fileReaderStore.getApplication(appName);
     if (application != null) {
@@ -209,7 +249,7 @@ public class FileWriterStore implements WriterStore {
                 groupFilter ->
                     groupFilter.getAppName().equalsIgnoreCase(appName)
                         && groupFilter.getName().equalsIgnoreCase(groupName));
-        updateUser(user);
+        updateUser(user, providerRequest);
         if (group.getUsers() != null) {
           try {
             group
@@ -223,6 +263,10 @@ public class FileWriterStore implements WriterStore {
             throw new RuntimeException("Error mapping application " + application.getName(), e);
           }
         }
+        ProviderResponse response = new ProviderResponse();
+        response.setEntityId(userId);
+        response.setStatus(ProviderResponseStatus.OK);
+        return response;
       } else {
         throw new RuntimeException("Group " + groupName + " doesn't exist in " + appName);
       }
@@ -236,7 +280,8 @@ public class FileWriterStore implements WriterStore {
    * are simplified groups to avoid information loop
    */
   @Override
-  public void addUserToGroup(String appName, String groupName, String userId) {
+  public ProviderResponse addUserToGroup(
+      String appName, String groupName, String userId, ProviderRequest providerRequest) {
     fileReaderStore.setResourceLoader(resourceLoader);
     Application application = fileReaderStore.getApplication(appName);
     if (application != null) {
@@ -255,7 +300,7 @@ public class FileWriterStore implements WriterStore {
               user.setGroups(new ArrayList<>());
             }
             user.getGroups().add(new Group(appName, groupName));
-            updateUser(user);
+            updateUser(user, new ProviderRequest(null, false, null));
             if (group.getUsers() == null) {
               group.setUsers(new ArrayList<>());
             }
@@ -264,6 +309,10 @@ public class FileWriterStore implements WriterStore {
                 config.get(FileKeysConfig.APP_SOURCE),
                 application.getName(),
                 mapper.writeValueAsString(application));
+            ProviderResponse response = new ProviderResponse();
+            response.setEntityId(userId);
+            response.setStatus(ProviderResponseStatus.OK);
+            return response;
           } catch (JsonProcessingException e) {
             throw new RuntimeException("Error mapping application " + application.getName(), e);
           }
@@ -279,24 +328,28 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public void reinitPassword(
-      User user, String generatedPassword, PasswordChangeRequest pcr, List<SendMode> sendMode) {
+  public ProviderResponse reinitPassword(
+      String userId,
+      String generatedPassword,
+      PasswordChangeRequest pcr,
+      List<SendMode> sendMode,
+      ProviderRequest providerRequest) {
     throw new UnsupportedOperationException("Password actions are not supported on file storage");
   }
 
   @Override
-  public void initPassword(
-      User user, String password, PasswordChangeRequest pcr, List<SendMode> sendMode) {
+  public ProviderResponse initPassword(
+      String userId,
+      String password,
+      PasswordChangeRequest pcr,
+      List<SendMode> sendMode,
+      ProviderRequest providerRequest) {
     throw new UnsupportedOperationException("Password actions are not supported on file storage");
   }
 
   @Override
-  public void changePasswordResetStatus(User user, boolean isReset) {
-    throw new UnsupportedOperationException("Password actions are not supported on file storage");
-  }
-
-  @Override
-  public Application createApplication(Application application) {
+  public ProviderResponse createApplication(
+      Application application, ProviderRequest providerRequest) {
     if (config.get(FileKeysConfig.APP_SOURCE) != null) {
       try {
         application.getGroups().forEach(group -> group.setUsers(null));
@@ -304,7 +357,10 @@ public class FileWriterStore implements WriterStore {
             config.get(FileKeysConfig.APP_SOURCE),
             application.getName(),
             mapper.writeValueAsString(application));
-        return application;
+        ProviderResponse response = new ProviderResponse();
+        response.setEntityId(application.getName());
+        response.setStatus(ProviderResponseStatus.OK);
+        return response;
       } catch (JsonProcessingException e) {
         throw new RuntimeException("Error mapping application " + application.getName(), e);
       }
@@ -314,7 +370,8 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public Application updateApplication(Application updatedApplication) {
+  public ProviderResponse updateApplication(
+      Application updatedApplication, ProviderRequest providerRequest) {
     if (config.get(FileKeysConfig.APP_SOURCE) != null) {
       try {
         fileReaderStore.setResourceLoader(resourceLoader);
@@ -329,7 +386,10 @@ public class FileWriterStore implements WriterStore {
             config.get(FileKeysConfig.APP_SOURCE),
             updatedApplication.getName(),
             mapper.writeValueAsString(updatedApplication));
-        return updatedApplication;
+        ProviderResponse response = new ProviderResponse();
+        response.setEntityId(updatedApplication.getName());
+        response.setStatus(ProviderResponseStatus.OK);
+        return response;
       } catch (JsonProcessingException e) {
         throw new RuntimeException("Error mapping application" + updatedApplication.getName(), e);
       }
@@ -339,17 +399,38 @@ public class FileWriterStore implements WriterStore {
   }
 
   @Override
-  public void deleteApplication(String applicationName) {
+  public ProviderResponse deleteApplication(
+      String applicationName, ProviderRequest providerRequest) {
     if (config.get(FileKeysConfig.APP_SOURCE) != null) {
       deleteResourceFile(config.get(FileKeysConfig.APP_SOURCE), applicationName);
+      ProviderResponse response = new ProviderResponse();
+      response.setEntityId(applicationName);
+      response.setStatus(ProviderResponseStatus.OK);
+      return response;
     } else {
       throw new UnsupportedOperationException("Applications feature not configured for this realm");
     }
   }
 
   @Override
-  public void changePassword(
-      User user, String oldPassword, String newPassword, PasswordChangeRequest pcr) {
+  public ProviderResponse changePassword(
+      String userId,
+      String oldPassword,
+      String newPassword,
+      PasswordChangeRequest pcr,
+      ProviderRequest providerRequest) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public ProviderResponse addAppManagedAttribute(
+      String userId, String attributeKey, String attribute, ProviderRequest providerRequest) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public ProviderResponse deleteAppManagedAttribute(
+      String userId, String attributeKey, String attribute, ProviderRequest providerRequest) {
     throw new NotImplementedException();
   }
 
@@ -381,15 +462,5 @@ public class FileWriterStore implements WriterStore {
     } catch (IOException e) {
       throw new RuntimeException("Error writing in file", e);
     }
-  }
-
-  @Override
-  public void addAppManagedAttribute(String userId, String attributeKey, String attribute) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public void deleteAppManagedAttribute(String userId, String attributeKey, String attribute) {
-    throw new NotImplementedException();
   }
 }

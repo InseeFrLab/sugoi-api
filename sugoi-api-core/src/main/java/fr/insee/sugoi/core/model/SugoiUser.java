@@ -13,15 +13,17 @@
 */
 package fr.insee.sugoi.core.model;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class SugoiUser {
+public class SugoiUser implements Serializable {
 
   private String name;
 
   private List<String> roles;
 
-  public SugoiUser() {}
+  public SugoiUser() {
+  }
 
   public SugoiUser(String name, List<String> roles) {
     this.name = name;

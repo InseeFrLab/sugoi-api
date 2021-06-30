@@ -51,7 +51,7 @@ public class LdapRealmProviderWriteTest {
         () -> ldapRealmProviderDAOImpl.load("toadd"),
         "Realm should not exist");
 
-    ldapRealmProviderDAOImpl.createRealm(realmToAdd);
+    ldapRealmProviderDAOImpl.createRealm(realmToAdd, null);
     Realm retrievedRealm = ldapRealmProviderDAOImpl.load("toadd");
     assertThat("Realm should be present", retrievedRealm.getName(), is("toadd"));
     assertThat("Realm should have an url", retrievedRealm.getUrl(), is("localhost"));
@@ -92,7 +92,7 @@ public class LdapRealmProviderWriteTest {
         RealmNotFoundException.class,
         () -> ldapRealmProviderDAOImpl.load("multistorage"),
         "Realm should not exist");
-    ldapRealmProviderDAOImpl.createRealm(realmToAdd);
+    ldapRealmProviderDAOImpl.createRealm(realmToAdd, null);
     Realm retrievedRealm = ldapRealmProviderDAOImpl.load("multistorage");
     assertThat("Realm should be present", retrievedRealm.getName(), is("multistorage"));
     assertThat(
@@ -111,7 +111,7 @@ public class LdapRealmProviderWriteTest {
   public void deleteRealmWithOneStorageTest() {
     assertThat(
         "Realm should be present", ldapRealmProviderDAOImpl.load("todelete"), is(not(nullValue())));
-    ldapRealmProviderDAOImpl.deleteRealm("todelete");
+    ldapRealmProviderDAOImpl.deleteRealm("todelete", null);
     assertThrows(
         RealmNotFoundException.class,
         () -> ldapRealmProviderDAOImpl.load("todelete"),
@@ -124,7 +124,7 @@ public class LdapRealmProviderWriteTest {
         "Realm should be present",
         ldapRealmProviderDAOImpl.load("todeletemulti"),
         is(not(nullValue())));
-    ldapRealmProviderDAOImpl.deleteRealm("todeletemulti");
+    ldapRealmProviderDAOImpl.deleteRealm("todeletemulti", null);
     assertThrows(
         RealmNotFoundException.class,
         () -> ldapRealmProviderDAOImpl.load("todeletemulti"),
@@ -136,7 +136,7 @@ public class LdapRealmProviderWriteTest {
     Realm realmToModify = ldapRealmProviderDAOImpl.load("tomodify");
     UserStorage userStorage = realmToModify.getUserStorages().get(0);
     userStorage.setUserSource("ou=contacts,ou=clients_domaine2,o=insee,c=fr");
-    ldapRealmProviderDAOImpl.updateRealm(realmToModify);
+    ldapRealmProviderDAOImpl.updateRealm(realmToModify, null);
     assertThat(
         "User source should change to domaine2",
         ldapRealmProviderDAOImpl.load("tomodify").getUserStorages().get(0).getUserSource(),
@@ -147,7 +147,7 @@ public class LdapRealmProviderWriteTest {
   public void changeRealmUrlTest() {
     Realm realmToModify = ldapRealmProviderDAOImpl.load("tomodify");
     realmToModify.setUrl("new_url");
-    ldapRealmProviderDAOImpl.updateRealm(realmToModify);
+    ldapRealmProviderDAOImpl.updateRealm(realmToModify, null);
     assertThat(
         "Url should have changed",
         ldapRealmProviderDAOImpl.load("tomodify").getUrl(),

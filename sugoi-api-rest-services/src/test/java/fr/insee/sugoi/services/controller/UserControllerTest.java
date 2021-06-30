@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.commons.services.controller.technics.SugoiAdviceController;
 import fr.insee.sugoi.core.exceptions.UserAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.User;
 import fr.insee.sugoi.model.paging.PageResult;
@@ -172,7 +174,7 @@ public class UserControllerTest {
               .with(csrf());
 
       mockMvc.perform(requestBuilder).andReturn();
-      verify(userService).delete("domaine1", null, "supprimemoi");
+      verify(userService).delete("domaine1", null, "supprimemoi", null);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -198,7 +200,8 @@ public class UserControllerTest {
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      verify(userService).update(Mockito.anyString(), Mockito.isNull(), Mockito.any());
+      verify(userService)
+          .update(Mockito.anyString(), Mockito.isNull(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get updated user",
           objectMapper.readValue(response.getContentAsString(), User.class).getMail(),
@@ -220,9 +223,11 @@ public class UserControllerTest {
   public void postShouldCallPostServiceAndReturnNewApp() {
 
     try {
-      Mockito.when(userService.create(Mockito.any(), Mockito.any(), Mockito.any()))
-          .thenReturn(user1)
-          .thenReturn(user1);
+      Mockito.when(userService.create(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+          .thenReturn(
+              new ProviderResponse(user1.getUsername(), null, ProviderResponseStatus.OK, null))
+          .thenReturn(
+              new ProviderResponse(user1.getUsername(), null, ProviderResponseStatus.OK, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
@@ -233,7 +238,8 @@ public class UserControllerTest {
               .with(csrf());
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
-      verify(userService).create(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+      verify(userService)
+          .create(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get new user",
           objectMapper.readValue(response.getContentAsString(), User.class).getUsername(),
@@ -277,8 +283,10 @@ public class UserControllerTest {
   public void getObjectLocationInUserCreationResponse() {
     try {
 
-      Mockito.when(userService.create(Mockito.anyString(), Mockito.any(), Mockito.any()))
-          .thenReturn(user1);
+      Mockito.when(
+              userService.create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any()))
+          .thenReturn(
+              new ProviderResponse(user1.getUsername(), null, ProviderResponseStatus.OK, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
@@ -373,7 +381,7 @@ public class UserControllerTest {
 
       Mockito.doThrow(new UserAlreadyExistException(""))
           .when(userService)
-          .create(Mockito.anyString(), Mockito.any(), Mockito.any());
+          .create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
@@ -446,7 +454,7 @@ public class UserControllerTest {
 
       Mockito.doThrow(new UserNotFoundException(""))
           .when(userService)
-          .update(Mockito.anyString(), Mockito.any(), Mockito.any());
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/users/Toto")
               .contentType(MediaType.APPLICATION_JSON)
@@ -472,7 +480,7 @@ public class UserControllerTest {
 
       Mockito.doThrow(new UserNotFoundException(""))
           .when(userService)
-          .update(Mockito.anyString(), Mockito.any(), Mockito.any());
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.delete("/realms/domaine1/users/dontexist")

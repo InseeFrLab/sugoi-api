@@ -25,7 +25,11 @@ import com.unboundid.ldap.sdk.SearchResult;
 import com.unboundid.ldap.sdk.SearchResultEntry;
 import com.unboundid.ldap.sdk.SearchScope;
 import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
+import fr.insee.sugoi.core.exceptions.RealmAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.ldap.utils.LdapFilter;
 import fr.insee.sugoi.ldap.utils.LdapUtils;
@@ -185,81 +189,103 @@ public class LdapRealmProviderDAOImpl implements RealmProvider {
   }
 
   @Override
-  public void createRealm(Realm realm) {
-    try {
-      LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
-      AddRequest addRequest =
-          new AddRequest(
-              getRealmDn(realm.getName()),
-              RealmLdapMapper.mapToAttributes(realm, realmEntryPattern, baseDn));
-      if (realm.getUserStorages().size() == 1) {
-        UserStorageLdapMapper.mapToAttributes(realm.getUserStorages().get(0)).stream()
-            .forEach(attribute -> addRequest.addAttribute(attribute));
-        ldapConnectionPool.add(addRequest);
-      } else {
-        ldapConnectionPool.add(addRequest);
-        for (UserStorage userStorage : realm.getUserStorages()) {
-          AddRequest userStorageAddRequest =
-              new AddRequest(
-                  String.format("cn=%s,%s", userStorage.getName(), getRealmDn(realm.getName())),
-                  UserStorageLdapMapper.mapToAttributes(userStorage));
-          ldapConnectionPool.add(userStorageAddRequest);
+  public ProviderResponse createRealm(Realm realm, ProviderRequest providerRequest) {
+    if (load(realm.getName()) == null) {
+      try {
+        LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
+        AddRequest addRequest =
+            new AddRequest(
+                getRealmDn(realm.getName()),
+                RealmLdapMapper.mapToAttributes(realm, realmEntryPattern, baseDn));
+        if (realm.getUserStorages().size() == 1) {
+          UserStorageLdapMapper.mapToAttributes(realm.getUserStorages().get(0)).stream()
+              .forEach(attribute -> addRequest.addAttribute(attribute));
+          ldapConnectionPool.add(addRequest);
+        } else {
+          ldapConnectionPool.add(addRequest);
+          for (UserStorage userStorage : realm.getUserStorages()) {
+            AddRequest userStorageAddRequest =
+                new AddRequest(
+                    String.format("cn=%s,%s", userStorage.getName(), getRealmDn(realm.getName())),
+                    UserStorageLdapMapper.mapToAttributes(userStorage));
+            ldapConnectionPool.add(userStorageAddRequest);
+          }
         }
+        ProviderResponse response = new ProviderResponse();
+        response.setStatus(ProviderResponseStatus.OK);
+        response.setEntityId(realm.getName());
+        return response;
+      } catch (LDAPException e) {
+        throw new RuntimeException("Failed to create realm " + realm.getName(), e);
       }
-    } catch (LDAPException e) {
-      throw new RuntimeException("Failed to create realm " + realm.getName(), e);
     }
+    throw new RealmAlreadyExistException(String.format("Realm %s already exist", realm.getName()));
   }
 
   @Override
-  public void updateRealm(Realm realm) {
-    try {
-      LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
-      ModifyRequest modifyRequest;
-      if (realm.getUserStorages().size() == 1) {
-        List<Attribute> realmAttributes =
-            RealmLdapMapper.mapToAttributes(realm, realmEntryPattern, baseDn);
-        List<Attribute> userStorageAttributes =
-            UserStorageLdapMapper.mapToAttributes(realm.getUserStorages().get(0));
-        realmAttributes.addAll(userStorageAttributes);
-        modifyRequest =
-            new ModifyRequest(
-                getRealmDn(realm.getName()),
-                LdapUtils.convertAttributesToModifications(realmAttributes));
-        ldapConnectionPool.modify(modifyRequest);
-      } else {
-        for (UserStorage userStorage : realm.getUserStorages()) {
-          ModifyRequest userStorageModifyRequest =
+  public ProviderResponse updateRealm(Realm realm, ProviderRequest providerRequest) {
+    if (load(realm.getName()) != null) {
+      try {
+        LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
+        ModifyRequest modifyRequest;
+        if (realm.getUserStorages().size() == 1) {
+          List<Attribute> realmAttributes =
+              RealmLdapMapper.mapToAttributes(realm, realmEntryPattern, baseDn);
+          List<Attribute> userStorageAttributes =
+              UserStorageLdapMapper.mapToAttributes(realm.getUserStorages().get(0));
+          realmAttributes.addAll(userStorageAttributes);
+          modifyRequest =
               new ModifyRequest(
-                  getUserStorageDn(userStorage.getName(), realm.getName()),
-                  UserStorageLdapMapper.createMods(userStorage));
-          ldapConnectionPool.modify(userStorageModifyRequest);
+                  getRealmDn(realm.getName()),
+                  LdapUtils.convertAttributesToModifications(realmAttributes));
+          ldapConnectionPool.modify(modifyRequest);
+        } else {
+          for (UserStorage userStorage : realm.getUserStorages()) {
+            ModifyRequest userStorageModifyRequest =
+                new ModifyRequest(
+                    getUserStorageDn(userStorage.getName(), realm.getName()),
+                    UserStorageLdapMapper.createMods(userStorage));
+            ldapConnectionPool.modify(userStorageModifyRequest);
+          }
+          modifyRequest =
+              new ModifyRequest(
+                  getRealmDn(realm.getName()),
+                  RealmLdapMapper.createMods(realm, realmEntryPattern, baseDn));
         }
-        modifyRequest =
-            new ModifyRequest(
-                getRealmDn(realm.getName()),
-                RealmLdapMapper.createMods(realm, realmEntryPattern, baseDn));
+        ldapConnectionPool.modify(modifyRequest);
+        ProviderResponse response = new ProviderResponse();
+        response.setStatus(ProviderResponseStatus.OK);
+        response.setEntityId(realm.getName());
+        return response;
+      } catch (LDAPException e) {
+        throw new RuntimeException("Failed to update realm " + realm.getName(), e);
       }
-      ldapConnectionPool.modify(modifyRequest);
-    } catch (LDAPException e) {
-      throw new RuntimeException("Failed to update realm " + realm.getName(), e);
     }
+    throw new RealmNotFoundException(String.format("Realm %s not found", realm.getName()));
   }
 
   @Override
-  public void deleteRealm(String realmName) {
-    try {
-      LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
-      List<UserStorage> userStorages = load(realmName).getUserStorages();
-      if (userStorages.size() > 1) {
-        for (UserStorage userStorage : load(realmName).getUserStorages()) {
-          ldapConnectionPool.delete(getUserStorageDn(userStorage.getName(), realmName));
+  public ProviderResponse deleteRealm(String realmName, ProviderRequest providerRequest) {
+    if (load(realmName) != null) {
+
+      try {
+        LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
+        List<UserStorage> userStorages = load(realmName).getUserStorages();
+        if (userStorages.size() > 1) {
+          for (UserStorage userStorage : load(realmName).getUserStorages()) {
+            ldapConnectionPool.delete(getUserStorageDn(userStorage.getName(), realmName));
+          }
         }
+        ldapConnectionPool.delete(getRealmDn(realmName));
+        ProviderResponse response = new ProviderResponse();
+        response.setStatus(ProviderResponseStatus.OK);
+        response.setEntityId(realmName);
+        return response;
+      } catch (LDAPException e) {
+        throw new RuntimeException("Failed to delete realm " + realmName, e);
       }
-      ldapConnectionPool.delete(getRealmDn(realmName));
-    } catch (LDAPException e) {
-      throw new RuntimeException("Failed to delete realm " + realmName, e);
     }
+    throw new RealmNotFoundException(String.format("Realm %s not found", realmName));
   }
 
   private synchronized LDAPConnectionPool initLdapPoolConnection() {

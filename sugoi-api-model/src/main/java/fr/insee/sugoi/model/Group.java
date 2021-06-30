@@ -13,15 +13,17 @@
 */
 package fr.insee.sugoi.model;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class Group {
+public class Group implements Serializable {
   private String name;
   private String description;
   private List<User> users;
   private String appName;
 
-  public Group() {}
+  public Group() {
+  }
 
   public Group(String name) {
     this.name = name;

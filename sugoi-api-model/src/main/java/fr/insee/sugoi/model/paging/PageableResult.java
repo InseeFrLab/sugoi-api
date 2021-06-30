@@ -13,14 +13,17 @@
 */
 package fr.insee.sugoi.model.paging;
 
-public class PageableResult {
+import java.io.Serializable;
+
+public class PageableResult implements Serializable {
   private static final int TAILLE_RECHERCHE_DEFAUT = 20;
 
   private int size = TAILLE_RECHERCHE_DEFAUT;
   private String searchToken;
   private int offset = 1;
 
-  public PageableResult() {}
+  public PageableResult() {
+  }
 
   public PageableResult(int size, int offset, String searchToken) {
     this.size = size;

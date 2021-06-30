@@ -13,6 +13,10 @@
 */
 package fr.insee.sugoi.jms.utils;
 
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.model.Application;
 import fr.insee.sugoi.model.Group;
 import fr.insee.sugoi.model.Organization;
@@ -107,6 +111,32 @@ public class Converter {
       pcr.setNewPassword((String) linkedHashMap.get("newPassword"));
       pcr.setOldPassword((String) linkedHashMap.get("oldPassword"));
       return pcr;
+    }
+    return null;
+  }
+
+  public ProviderRequest toProviderRequest(Object object) {
+    LinkedHashMap linkedHashMap = (LinkedHashMap) object;
+    if (linkedHashMap != null) {
+      ProviderRequest pr = new ProviderRequest();
+      pr.setAsynchronousAllowed((boolean) linkedHashMap.get("asynchronousAllowed"));
+      pr.setSugoiUser((SugoiUser) linkedHashMap.get("sugoiUser"));
+      pr.setIsUrgent((boolean) linkedHashMap.get("urgent"));
+      pr.setTransactionId((String) linkedHashMap.get("transactionId"));
+      return pr;
+    }
+    return null;
+  }
+
+  public ProviderResponse toProviderResponse(Object object) {
+    LinkedHashMap linkedHashMap = (LinkedHashMap) object;
+    if (linkedHashMap != null) {
+      ProviderResponse pr = new ProviderResponse();
+      pr.setEntityId((String) linkedHashMap.get("entityId"));
+      pr.setException((RuntimeException) linkedHashMap.get("exception"));
+      pr.setRequestId((String) linkedHashMap.get("requestId"));
+      pr.setStatus((ProviderResponseStatus) linkedHashMap.get("status"));
+      return pr;
     }
     return null;
   }

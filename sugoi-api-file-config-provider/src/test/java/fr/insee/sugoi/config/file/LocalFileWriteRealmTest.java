@@ -87,7 +87,7 @@ public class LocalFileWriteRealmTest {
         RealmNotFoundException.class,
         () -> localFileConfig.load("toadd"),
         "Realm should not exist");
-    localFileConfig.createRealm(realmToAdd);
+    localFileConfig.createRealm(realmToAdd, null);
     Realm retrievedRealm = localFileConfig.load("toadd");
     assertThat("Realm should be present", retrievedRealm.getName(), is("toadd"));
     assertThat("Realm should have an url", retrievedRealm.getUrl(), is("localhost"));
@@ -128,7 +128,7 @@ public class LocalFileWriteRealmTest {
         RealmNotFoundException.class,
         () -> localFileConfig.load("toadd"),
         "Realm should not exist");
-    localFileConfig.createRealm(realmToAdd);
+    localFileConfig.createRealm(realmToAdd, null);
     Realm retrievedRealm = localFileConfig.load("multistorage");
     assertThat("Realm should be present", retrievedRealm.getName(), is("multistorage"));
     assertThat(
@@ -146,7 +146,7 @@ public class LocalFileWriteRealmTest {
   @Test
   public void deleteRealmWithOneStorageTest() {
     assertThat("Realm should be present", localFileConfig.load("todelete"), is(not(nullValue())));
-    localFileConfig.deleteRealm("todelete");
+    localFileConfig.deleteRealm("todelete", null);
     assertThrows(
         RealmNotFoundException.class,
         () -> localFileConfig.load("toadd"),
@@ -158,7 +158,7 @@ public class LocalFileWriteRealmTest {
     Realm realmToModify = localFileConfig.load("tomodify");
     UserStorage userStorage = realmToModify.getUserStorages().get(0);
     userStorage.setUserSource("ou=contacts,ou=clients_domaine2,o=insee,c=fr");
-    localFileConfig.updateRealm(realmToModify);
+    localFileConfig.updateRealm(realmToModify, null);
     assertThat(
         "User source should change to domaine2",
         localFileConfig.load("tomodify").getUserStorages().get(0).getUserSource(),
@@ -169,7 +169,7 @@ public class LocalFileWriteRealmTest {
   public void changeRealmUrlTest() {
     Realm realmToModify = localFileConfig.load("tomodify");
     realmToModify.setUrl("new_url");
-    localFileConfig.updateRealm(realmToModify);
+    localFileConfig.updateRealm(realmToModify, null);
     assertThat("Url should have changed", localFileConfig.load("tomodify").getUrl(), is("new_url"));
   }
 }

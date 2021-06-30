@@ -34,4 +34,5 @@ public class LdapConfigKeys extends GlobalKeysConfig {
   public static final String GROUP_OBJECT_CLASSES = "group_object_classes";
   public static final String APPLICATION_OBJECT_CLASSES = "application_object_classes";
   public static final String ADDRESS_OBJECT_CLASSES = "address_object_classes";
+  public static final String USERSTORAGE_NAME = "userstorage_name";
 }

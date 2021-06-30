@@ -14,6 +14,8 @@
 package fr.insee.sugoi.core.realm;
 
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.UserStorage;
 import java.util.List;
@@ -108,15 +110,15 @@ public interface RealmProvider {
   @CacheEvict(
       value = {"Realms", "Realm"},
       allEntries = true)
-  public void createRealm(Realm realm);
+  public ProviderResponse createRealm(Realm realm, ProviderRequest providerRequest);
 
   @CacheEvict(
       value = {"Realms", "Realm"},
       allEntries = true)
-  public void updateRealm(Realm realm);
+  public ProviderResponse updateRealm(Realm realm, ProviderRequest providerRequest);
 
   @CacheEvict(
       value = {"Realms", "Realm"},
       allEntries = true)
-  public void deleteRealm(String realmName);
+  public ProviderResponse deleteRealm(String realmName, ProviderRequest providerRequest);
 }
