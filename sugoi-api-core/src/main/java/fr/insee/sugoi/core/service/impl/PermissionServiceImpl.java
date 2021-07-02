@@ -14,11 +14,11 @@
 package fr.insee.sugoi.core.service.impl;
 
 import fr.insee.sugoi.core.model.SugoiUser;
-import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.PermissionService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.text.StrSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -48,9 +47,7 @@ public class PermissionServiceImpl implements PermissionService {
   @Value("${fr.insee.sugoi.api.regexp.role.application.manager:}")
   private List<String> applicationManagerRoleList;
 
-  @Autowired private RealmProvider realmProvider;
-
-  public static final Logger logger = LoggerFactory.getLogger(PermissionService.class);
+  public static final Logger logger = LoggerFactory.getLogger(PermissionServiceImpl.class);
 
   @Override
   public boolean isReader(SugoiUser sugoiUser, String realm, String userStorage) {
@@ -106,7 +103,7 @@ public class PermissionServiceImpl implements PermissionService {
         return true;
       }
       for (String role : roles) {
-        if (role.toUpperCase().matches(roleSearch.replaceAll("\\*", ".*").toUpperCase())) {
+        if (role.toUpperCase().matches(roleSearch.replace("*", ".*").toUpperCase())) {
           return true;
         }
       }
@@ -181,7 +178,7 @@ public class PermissionServiceImpl implements PermissionService {
                   }
                   return null;
                 })
-            .filter(role -> role != null)
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
     return roles;
   }

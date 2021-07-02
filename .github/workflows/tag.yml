@@ -31,6 +31,7 @@ jobs:
           echo -e "\n\n" >> changelog.tmp
           cat CHANGELOG.md >> changelog.tmp
           mv changelog.tmp CHANGELOG.md
+          mvn -B spotless:apply
           git add .
           git commit -sm "[REL] :rocket: release version ${{ github.event.inputs.version }}"
           git push origin release-${{ github.event.inputs.version }} -f

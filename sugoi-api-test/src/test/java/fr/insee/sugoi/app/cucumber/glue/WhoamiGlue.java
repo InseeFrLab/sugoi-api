@@ -42,7 +42,7 @@ public class WhoamiGlue {
   public void expect_to_receive_his_rights() {
     ObjectMapper mapper = new ObjectMapper();
     try {
-      WhoamiView view = mapper.readValue(stepData.getLatestResponse().getBody(), WhoamiView.class);
+      mapper.readValue(stepData.getLatestResponse().getBody(), WhoamiView.class);
       assertThat("Data receive is a whoamiView", true, is(true));
     } catch (JsonProcessingException e) {
       assertThat("Data receive is a whoamiView", false, is(true));

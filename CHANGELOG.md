@@ -1,4 +1,4 @@
-# 0.6.0 
+# 0.6.0
 
 
 - [BUG] :bug: Signoff commit when preparing release

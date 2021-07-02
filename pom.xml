@@ -40,6 +40,7 @@
 		<apache.commons.version>1.9</apache.commons.version>
 		<wiremock-standalone.version>2.27.2</wiremock-standalone.version>
 		<freemarker.version>2.3.31</freemarker.version>
+		<git-commit-id-plugin.version>4.0.5</git-commit-id-plugin.version>
 	</properties>
 
 	<dependencies></dependencies>
@@ -333,6 +334,7 @@
 			<plugin>
 				<groupId>pl.project13.maven</groupId>
 				<artifactId>git-commit-id-plugin</artifactId>
+				<version>${git-commit-id-plugin.version}</version>
 				<executions>
 					<execution>
 						<phase>validate</phase>
