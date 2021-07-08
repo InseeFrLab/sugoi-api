@@ -120,10 +120,21 @@ public class Converter {
     if (linkedHashMap != null) {
       ProviderRequest pr = new ProviderRequest();
       pr.setAsynchronousAllowed((boolean) linkedHashMap.get("asynchronousAllowed"));
-      pr.setSugoiUser((SugoiUser) linkedHashMap.get("sugoiUser"));
+      pr.setSugoiUser(toSugoiUser(linkedHashMap.get("sugoiUser")));
       pr.setIsUrgent((boolean) linkedHashMap.get("urgent"));
       pr.setTransactionId((String) linkedHashMap.get("transactionId"));
       return pr;
+    }
+    return null;
+  }
+
+  public SugoiUser toSugoiUser(Object object) {
+    LinkedHashMap linkedHashMap = (LinkedHashMap) object;
+    if (linkedHashMap != null) {
+      SugoiUser su = new SugoiUser();
+      su.setName((String) linkedHashMap.get("name"));
+      su.setRoles((List<String>) linkedHashMap.get("roles"));
+      return su;
     }
     return null;
   }

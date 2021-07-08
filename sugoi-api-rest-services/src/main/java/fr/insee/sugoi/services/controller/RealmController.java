@@ -156,7 +156,7 @@ public class RealmController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, true, false))
         .location(createRealmURI(realm.getName()))
@@ -218,7 +218,7 @@ public class RealmController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, false))
         .location(createRealmURI(realm.getName()))
@@ -266,7 +266,7 @@ public class RealmController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
 
     return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))

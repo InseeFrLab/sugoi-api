@@ -22,8 +22,7 @@ public class SugoiUser implements Serializable {
 
   private List<String> roles;
 
-  public SugoiUser() {
-  }
+  public SugoiUser() {}
 
   public SugoiUser(String name, List<String> roles) {
     this.name = name;

@@ -15,7 +15,7 @@ package fr.insee.sugoi.model.paging;
 
 import java.io.Serializable;
 
-public enum SendMode implements Serializable{
+public enum SendMode implements Serializable {
   MAIL("mail"),
   LETTER("letter");
 

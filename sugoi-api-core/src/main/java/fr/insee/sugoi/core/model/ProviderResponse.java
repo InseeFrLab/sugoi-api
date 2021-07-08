@@ -23,15 +23,15 @@ public class ProviderResponse implements Serializable {
   RuntimeException exception;
   Object entity;
 
-  public ProviderResponse(String entityId, String requestId, ProviderResponseStatus status, RuntimeException e) {
+  public ProviderResponse(
+      String entityId, String requestId, ProviderResponseStatus status, RuntimeException e) {
     this.entityId = entityId;
     this.requestId = requestId;
     this.status = status;
     this.exception = e;
   }
 
-  public ProviderResponse() {
-  }
+  public ProviderResponse() {}
 
   public enum ProviderResponseStatus {
     // Request is executed and result is effective at once

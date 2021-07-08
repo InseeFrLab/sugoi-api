@@ -241,7 +241,7 @@ public class OrganizationController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     URI location =
         ServletUriComponentsBuilder.fromCurrentRequest()
@@ -322,7 +322,7 @@ public class OrganizationController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
     return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, false))
@@ -453,7 +453,7 @@ public class OrganizationController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
         .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())

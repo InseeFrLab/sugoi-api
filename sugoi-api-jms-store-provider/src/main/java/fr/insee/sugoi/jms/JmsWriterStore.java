@@ -300,10 +300,14 @@ public class JmsWriterStore implements WriterStore {
         // We dont't care of the jmstemplate when checking for response we just care
         // about the queue name
         BrokerResponse br =
-            jmsWriter.checkResponseInQueueAsynchronous(
+            jmsWriter.checkResponseInQueueSynchronous(
                 providerRequest.isUrgent() ? queueUrgentResponseName : queueResponseName,
                 providerRequest.getTransactionId());
-
+        if (br == null) {
+          response.setStatus(ProviderResponseStatus.PENDING);
+          response.setRequestId(providerRequest.getTransactionId());
+          return response;
+        }
         response = br.getProviderResponse();
         if (response.getStatus() == ProviderResponseStatus.OK) {
           response.setStatus(ProviderResponseStatus.ACCEPTED);
@@ -343,7 +347,16 @@ public class JmsWriterStore implements WriterStore {
             jmsWriter.checkResponseInQueueSynchronous(
                 providerRequest.isUrgent() ? queueUrgentResponseName : queueResponseName,
                 correlationId);
+        // warn : br is null if no response in time
+
+        if (br == null) {
+          response.setStatus(ProviderResponseStatus.PENDING);
+          response.setRequestId(providerRequest.getTransactionId());
+          return response;
+        }
+
         response = br.getProviderResponse();
+
         if (response.getStatus() == ProviderResponseStatus.OK) {
           response.setStatus(ProviderResponseStatus.ACCEPTED);
         } else if (response.getStatus() == ProviderResponseStatus.KO) {

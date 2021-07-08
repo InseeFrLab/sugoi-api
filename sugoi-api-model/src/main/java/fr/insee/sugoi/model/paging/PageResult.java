@@ -17,7 +17,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PageResult<T> implements Serializable{
+public class PageResult<T> implements Serializable {
   private static final int TAILLE_RECHERCHE_DEFAUT = 20;
 
   private List<T> results = new ArrayList<>();

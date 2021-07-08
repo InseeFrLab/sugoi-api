@@ -296,7 +296,7 @@ public class AppManagedUserAttributeController {
                               .map(String::toUpperCase)
                               .collect(Collectors.toList())),
                       isAsynchronous,
-                      null,
+                      transactionId,
                       isUrgent));
           return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
               .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
@@ -326,7 +326,7 @@ public class AppManagedUserAttributeController {
                                 .map(String::toUpperCase)
                                 .collect(Collectors.toList())),
                         isAsynchronous,
-                        null,
+                        transactionId,
                         isUrgent));
             return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
                 .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())

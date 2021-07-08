@@ -13,20 +13,15 @@
 */
 package fr.insee.sugoi.jms.model;
 
-import java.io.Serializable;
-
-import org.apache.activemq.command.ActiveMQMessage;
-
 import fr.insee.sugoi.core.model.ProviderResponse;
 
-public class BrokerResponse extends ActiveMQMessage implements Serializable {
+public class BrokerResponse {
 
   private String comment;
 
   private ProviderResponse providerResponse;
 
-  public BrokerResponse() {
-  }
+  public BrokerResponse() {}
 
   public String getComment() {
     return comment;
@@ -43,5 +38,4 @@ public class BrokerResponse extends ActiveMQMessage implements Serializable {
   public void setProviderResponse(ProviderResponse providerResponse) {
     this.providerResponse = providerResponse;
   }
-
 }

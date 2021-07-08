@@ -22,8 +22,7 @@ public class Group implements Serializable {
   private List<User> users;
   private String appName;
 
-  public Group() {
-  }
+  public Group() {}
 
   public Group(String name) {
     this.name = name;
