@@ -16,6 +16,7 @@ package fr.insee.sugoi.app.cucumber.utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.springframework.http.client.ClientHttpResponse;
 
@@ -40,5 +41,9 @@ public class ResponseResults {
 
   public String getBody() {
     return body;
+  }
+
+  public List<String> getHeader(String headerName) {
+    return theResponse.getHeaders().get(headerName);
   }
 }

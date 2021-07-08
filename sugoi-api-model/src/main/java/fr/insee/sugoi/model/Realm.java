@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Realm implements Serializable{
+public class Realm implements Serializable {
   private String name;
   private String url;
   private String appSource;

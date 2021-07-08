@@ -15,6 +15,7 @@ package fr.insee.sugoi.services.controller;
 
 import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
 import fr.insee.sugoi.core.exceptions.AppCannotManagedAttributeException;
+import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
 import fr.insee.sugoi.core.model.ProviderRequest;
 import fr.insee.sugoi.core.model.ProviderResponse;
@@ -126,7 +127,11 @@ public class AppManagedUserAttributeController {
             .map(String::toUpperCase)
             .collect(Collectors.toList());
     SugoiUser sugoiUser = new SugoiUser(authentication.getName(), roles);
-    Realm _realm = realmProvider.load(realm);
+    Realm _realm =
+        realmProvider
+            .load(realm)
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     List<String> attributes_allowed =
         Arrays.asList(
             _realm
@@ -269,7 +274,11 @@ public class AppManagedUserAttributeController {
             .map(String::toUpperCase)
             .collect(Collectors.toList());
     SugoiUser sugoiUser = new SugoiUser(authentication.getName(), roles);
-    Realm _realm = realmProvider.load(realm);
+    Realm _realm =
+        realmProvider
+            .load(realm)
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     List<String> attributes_allowed =
         Arrays.asList(
             _realm
@@ -296,7 +305,7 @@ public class AppManagedUserAttributeController {
                               .map(String::toUpperCase)
                               .collect(Collectors.toList())),
                       isAsynchronous,
-                      null,
+                      transactionId,
                       isUrgent));
           return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
               .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
@@ -326,7 +335,7 @@ public class AppManagedUserAttributeController {
                                 .map(String::toUpperCase)
                                 .collect(Collectors.toList())),
                         isAsynchronous,
-                        null,
+                        transactionId,
                         isUrgent));
             return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
                 .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())

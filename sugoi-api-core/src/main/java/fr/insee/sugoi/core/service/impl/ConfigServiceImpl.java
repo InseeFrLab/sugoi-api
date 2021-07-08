@@ -40,7 +40,11 @@ public class ConfigServiceImpl implements ConfigService {
   @Override
   public Optional<Realm> getRealm(String name) {
     try {
-      Realm realm = realmProvider.load(name);
+      Realm realm =
+          realmProvider
+              .load(name)
+              .orElseThrow(
+                  () -> new RealmNotFoundException("The realm " + name + " doesn't exist "));
       sugoiEventPublisher.publishCustomEvent(
           null,
           null,

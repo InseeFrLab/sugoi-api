@@ -17,6 +17,7 @@ import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
 import fr.insee.sugoi.core.event.configuration.EventKeysConfig;
 import fr.insee.sugoi.core.event.model.SugoiEventTypeEnum;
 import fr.insee.sugoi.core.event.publisher.SugoiEventPublisher;
+import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
 import fr.insee.sugoi.core.model.ProviderRequest;
 import fr.insee.sugoi.core.model.ProviderResponse;
@@ -149,7 +150,11 @@ public class UserServiceImpl implements UserService {
     User user = null;
     try {
       if (id != null) {
-        Realm realm = realmProvider.load(realmName);
+        Realm realm =
+            realmProvider
+                .load(realmName)
+                .orElseThrow(
+                    () -> new RealmNotFoundException("The realm " + realmName + " doesn't exist "));
         if (storage != null) {
           user = storeProvider.getReaderStore(realmName, storage).getUser(id);
           user.addMetadatas(GlobalKeysConfig.REALM, realmName.toLowerCase());
@@ -239,7 +244,11 @@ public class UserServiceImpl implements UserService {
                   user.addMetadatas(EventKeysConfig.USERSTORAGE, storage);
                 });
       } else {
-        Realm r = realmProvider.load(realm);
+        Realm r =
+            realmProvider
+                .load(realm)
+                .orElseThrow(
+                    () -> new RealmNotFoundException("The realm " + realm + " doesn't exist "));
         for (UserStorage us : r.getUserStorages()) {
           ReaderStore readerStore =
               storeProvider.getStoreForUserStorage(realm, us.getName()).getReader();

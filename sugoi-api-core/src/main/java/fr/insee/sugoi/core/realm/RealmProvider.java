@@ -19,6 +19,7 @@ import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.UserStorage;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 
@@ -46,7 +47,7 @@ public interface RealmProvider {
    * @throws RealmNotFoundException
    */
   @Cacheable(value = "Realm", key = "#realmName")
-  public Realm load(String realmName) throws RealmNotFoundException;
+  public Optional<Realm> load(String realmName) throws RealmNotFoundException;
 
   /**
    * Find an userStorage by name. Default implementation is to call 'load(realmName) and browse
@@ -59,7 +60,10 @@ public interface RealmProvider {
    */
   public default UserStorage loadUserStorageByUserStorageName(
       String realmName, String userStorageName) throws RealmNotFoundException {
-    Realm r = load(realmName);
+    Realm r =
+        load(realmName)
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + realmName + "doesn't exist"));
     if (r != null) {
 
       for (UserStorage us : r.getUserStorages()) {

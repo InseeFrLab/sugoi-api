@@ -20,6 +20,10 @@ public class BrokerException extends RuntimeException {
 
   private String message;
 
+  public BrokerException(Exception e) {
+    super(e);
+  }
+
   public BrokerException(String message) {
     this.message = message;
   }

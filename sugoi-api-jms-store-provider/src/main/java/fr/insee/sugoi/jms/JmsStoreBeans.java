@@ -31,13 +31,13 @@ public class JmsStoreBeans {
   @Value("${fr.insee.sugoi.jms.queue.requests.name:}")
   private String queueRequestName;
 
-  @Value("${fr.insee.sugoi.jms.queue.requests.name:}")
+  @Value("${fr.insee.sugoi.jms.queue.response.name:}")
   private String queueResponseName;
 
   @Value("${fr.insee.sugoi.jms.queue.requests.name:}")
   private String queueUrgentRequestName;
 
-  @Value("${fr.insee.sugoi.jms.queue.requests.name:}")
+  @Value("${fr.insee.sugoi.jms.queue.response.name:}")
   private String queueUrgentResponseName;
 
   @Bean("JMSWriterStore")

@@ -183,7 +183,11 @@ public class OrganizationControllerTest {
       Mockito.when(organizationService.findById("domaine1", null, "SimpleOrga"))
           .thenReturn(Optional.of(organization2))
           .thenReturn(Optional.of(organization2Updated));
-
+      Mockito.doReturn(
+              new ProviderResponse(
+                  "", "requestId", ProviderResponseStatus.OK, organization2Updated, null))
+          .when(organizationService)
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/organizations/SimpleOrga")
               .contentType(MediaType.APPLICATION_JSON)
@@ -219,13 +223,11 @@ public class OrganizationControllerTest {
   public void postShouldCallPostServiceAndReturnNewApp() {
 
     try {
-      Mockito.when(
-              organizationService.create(
-                  Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-          .thenReturn(
-              new ProviderResponse(
-                  organization1.getIdentifiant(), null, ProviderResponseStatus.OK, null));
 
+      Mockito.doReturn(
+              new ProviderResponse("", "requestId", ProviderResponseStatus.OK, organization1, null))
+          .when(organizationService)
+          .create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
                   "/realms/domaine1/storages/Profil_domaine1_WebServiceLdap/organizations")
@@ -291,7 +293,7 @@ public class OrganizationControllerTest {
                   Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any()))
           .thenReturn(
               new ProviderResponse(
-                  organization1.getIdentifiant(), null, ProviderResponseStatus.OK, null));
+                  organization1.getIdentifiant(), null, ProviderResponseStatus.OK, null, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(

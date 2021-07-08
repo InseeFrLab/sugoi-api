@@ -14,6 +14,7 @@
 package fr.insee.sugoi.core.store.impl;
 
 import fr.insee.sugoi.core.exceptions.InvalidUserStorageException;
+import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.store.ReaderStore;
 import fr.insee.sugoi.core.store.Store;
@@ -38,7 +39,11 @@ public class StoreProviderImpl implements StoreProvider {
 
   @Override
   public Store getStoreForUserStorage(String realmName, String userStorageName) {
-    Realm r = realmProvider.load(realmName);
+    Realm r =
+        realmProvider
+            .load(realmName)
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + realmName + " doesn't exist "));
     UserStorage us = realmProvider.loadUserStorageByUserStorageName(realmName, userStorageName);
     return storeStorage.getStore(r, us);
   }
@@ -50,7 +55,14 @@ public class StoreProviderImpl implements StoreProvider {
               realm,
               (storage != null)
                   ? storage
-                  : realmProvider.load(realm).getUserStorages().get(0).getName())
+                  : realmProvider
+                      .load(realm)
+                      .orElseThrow(
+                          () ->
+                              new RealmNotFoundException("The realm " + realm + " doesn't exist "))
+                      .getUserStorages()
+                      .get(0)
+                      .getName())
           .getReader();
     }
     logger.info("User storage can not be null");
@@ -69,14 +81,28 @@ public class StoreProviderImpl implements StoreProvider {
   @Override
   public WriterStore getWriterStore(String realm) {
     return this.getStoreForUserStorage(
-            realm, realmProvider.load(realm).getUserStorages().get(0).getName())
+            realm,
+            realmProvider
+                .load(realm)
+                .orElseThrow(
+                    () -> new RealmNotFoundException("The realm " + realm + " doesn't exist "))
+                .getUserStorages()
+                .get(0)
+                .getName())
         .getWriter();
   }
 
   @Override
   public ReaderStore getReaderStore(String realm) {
     return this.getStoreForUserStorage(
-            realm, realmProvider.load(realm).getUserStorages().get(0).getName())
+            realm,
+            realmProvider
+                .load(realm)
+                .orElseThrow(
+                    () -> new RealmNotFoundException("The realm " + realm + " doesn't exist "))
+                .getUserStorages()
+                .get(0)
+                .getName())
         .getReader();
   }
 }

@@ -31,6 +31,7 @@ import fr.insee.sugoi.model.Organization;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.User;
 import fr.insee.sugoi.model.UserStorage;
+import fr.insee.sugoi.model.paging.PasswordChangeRequest;
 import fr.insee.sugoi.store.ldap.LdapReaderStore;
 import fr.insee.sugoi.store.ldap.LdapStoreBeans;
 import fr.insee.sugoi.store.ldap.LdapWriterStore;
@@ -460,14 +461,14 @@ public class LdapWriterStoreTest {
     assertThat(
         "Password should not be reinit",
         !ldapReaderStore.validateCredentials(ldapReaderStore.getUser("testo"), "reinit"));
-    ldapWriterStore.reinitPassword("testo", "reinit", null, null, null);
+    ldapWriterStore.reinitPassword("testo", "reinit", new PasswordChangeRequest(), null, null);
     assertThat(
         "Password should be reinit",
         ldapReaderStore.validateCredentials(ldapReaderStore.getUser("testo"), "reinit"));
     assertThat(
         "Password should not be testo",
         !ldapReaderStore.validateCredentials(ldapReaderStore.getUser("testo"), "testo"));
-    ldapWriterStore.reinitPassword("testo", "reinit2", null, null, null);
+    ldapWriterStore.reinitPassword("testo", "reinit2", new PasswordChangeRequest(), null, null);
     assertThat(
         "Password should be reinit2",
         ldapReaderStore.validateCredentials(ldapReaderStore.getUser("testo"), "reinit2"));

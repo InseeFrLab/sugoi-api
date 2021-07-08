@@ -49,7 +49,7 @@ public class JmsConfiguration {
   @Value("${fr.insee.sugoi.jms.broker.password:}")
   private String password;
 
-  @Value("${fr.insee.sugoi.jms.broker.timeout:}")
+  @Value("${fr.insee.sugoi.jms.broker.timeout:5000}")
   private Integer timeout;
 
   @Bean

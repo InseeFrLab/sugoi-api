@@ -39,6 +39,7 @@ import fr.insee.sugoi.ldap.utils.mapper.UserStorageLdapMapper;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.UserStorage;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -88,7 +89,7 @@ public class LdapRealmProviderDAOImpl implements RealmProvider {
   private static LDAPConnectionPool ldapConnectionPool;
 
   @Override
-  public Realm load(String realmName) {
+  public Optional<Realm> load(String realmName) {
     logger.info("Loading configuration from ldap://{}:{}/{}", url, port, baseDn);
     try {
       LDAPConnectionPool ldapConnection = initLdapPoolConnection();
@@ -116,12 +117,12 @@ public class LdapRealmProviderDAOImpl implements RealmProvider {
               defaultAppManagedAttributePatternList);
         }
         realm.getProperties().putIfAbsent(LdapConfigKeys.SORT_KEY, defaultSortKey);
-        return realm;
+        return Optional.of(realm);
       }
-      throw new RealmNotFoundException("Erreur lors du chargement du realm " + realmName);
+      return Optional.empty();
     } catch (Exception e) {
       e.printStackTrace();
-      throw new RealmNotFoundException("Erreur lors du chargement du realm " + realmName);
+      return Optional.empty();
     }
   }
 
@@ -190,7 +191,7 @@ public class LdapRealmProviderDAOImpl implements RealmProvider {
 
   @Override
   public ProviderResponse createRealm(Realm realm, ProviderRequest providerRequest) {
-    if (load(realm.getName()) == null) {
+    if (load(realm.getName()).isEmpty()) {
       try {
         LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
         AddRequest addRequest =
@@ -224,7 +225,7 @@ public class LdapRealmProviderDAOImpl implements RealmProvider {
 
   @Override
   public ProviderResponse updateRealm(Realm realm, ProviderRequest providerRequest) {
-    if (load(realm.getName()) != null) {
+    if (load(realm.getName()).isPresent()) {
       try {
         LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
         ModifyRequest modifyRequest;
@@ -270,9 +271,17 @@ public class LdapRealmProviderDAOImpl implements RealmProvider {
 
       try {
         LDAPConnectionPool ldapConnectionPool = initLdapPoolConnection();
-        List<UserStorage> userStorages = load(realmName).getUserStorages();
+        List<UserStorage> userStorages =
+            load(realmName)
+                .orElseThrow(
+                    () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "))
+                .getUserStorages();
         if (userStorages.size() > 1) {
-          for (UserStorage userStorage : load(realmName).getUserStorages()) {
+          for (UserStorage userStorage :
+              load(realmName)
+                  .orElseThrow(
+                      () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "))
+                  .getUserStorages()) {
             ldapConnectionPool.delete(getUserStorageDn(userStorage.getName(), realmName));
           }
         }

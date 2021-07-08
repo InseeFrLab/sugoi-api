@@ -22,8 +22,7 @@ public class PageableResult implements Serializable {
   private String searchToken;
   private int offset = 1;
 
-  public PageableResult() {
-  }
+  public PageableResult() {}
 
   public PageableResult(int size, int offset, String searchToken) {
     this.size = size;

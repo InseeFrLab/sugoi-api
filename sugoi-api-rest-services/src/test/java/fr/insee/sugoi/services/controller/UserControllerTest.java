@@ -165,16 +165,21 @@ public class UserControllerTest {
   public void deleteShouldCallDeleteService() {
     try {
 
+      Mockito.doReturn(new ProviderResponse("", "requestId", ProviderResponseStatus.OK, null, null))
+          .when(userService)
+          .delete(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
       Mockito.when(userService.findById(Mockito.anyString(), Mockito.isNull(), Mockito.anyString()))
+          .thenReturn(Optional.of(user1))
           .thenReturn(Optional.of(user1));
 
       RequestBuilder requestBuilder =
-          MockMvcRequestBuilders.delete("/realms/domaine1/users/supprimemoi")
+          MockMvcRequestBuilders.delete("/realms/domaine1/storages/toto/users/supprimemoi")
               .accept(MediaType.APPLICATION_JSON)
               .with(csrf());
 
       mockMvc.perform(requestBuilder).andReturn();
-      verify(userService).delete("domaine1", null, "supprimemoi", null);
+      verify(userService).delete(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -187,12 +192,17 @@ public class UserControllerTest {
   public void updateShouldCallUpdateServiceAndReturnNewApp() {
     try {
 
-      Mockito.when(userService.findById("domaine1", null, "Toto"))
+      Mockito.when(userService.findById(Mockito.anyString(), Mockito.any(), Mockito.any()))
           .thenReturn(Optional.of(user1))
           .thenReturn(Optional.of(user1Updated));
 
+      Mockito.doReturn(
+              new ProviderResponse("", "requestId", ProviderResponseStatus.OK, user1Updated, null))
+          .when(userService)
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
+
       RequestBuilder requestBuilder =
-          MockMvcRequestBuilders.put("/realms/domaine1/users/Toto")
+          MockMvcRequestBuilders.put("/realms/domaine1/storages/domaine1/users/Toto")
               .contentType(MediaType.APPLICATION_JSON)
               .content(objectMapper.writeValueAsString(user1Updated))
               .accept(MediaType.APPLICATION_JSON)
@@ -200,8 +210,7 @@ public class UserControllerTest {
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      verify(userService)
-          .update(Mockito.anyString(), Mockito.isNull(), Mockito.any(), Mockito.any());
+      verify(userService).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get updated user",
           objectMapper.readValue(response.getContentAsString(), User.class).getMail(),
@@ -210,7 +219,7 @@ public class UserControllerTest {
       assertThat(
           "Should get location",
           response.getHeader("Location"),
-          is("http://localhost/realms/domaine1/users/Toto"));
+          is("http://localhost/realms/domaine1/storages/domaine1/users/Toto"));
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -223,12 +232,10 @@ public class UserControllerTest {
   public void postShouldCallPostServiceAndReturnNewApp() {
 
     try {
-      Mockito.when(userService.create(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-          .thenReturn(
-              new ProviderResponse(user1.getUsername(), null, ProviderResponseStatus.OK, null))
-          .thenReturn(
-              new ProviderResponse(user1.getUsername(), null, ProviderResponseStatus.OK, null));
-
+      Mockito.doReturn(
+              new ProviderResponse("", "requestId", ProviderResponseStatus.OK, user1, null))
+          .when(userService)
+          .create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
                   "/realms/domaine1/storages/Profil_domaine1_WebServiceLdap/users")
@@ -286,7 +293,8 @@ public class UserControllerTest {
       Mockito.when(
               userService.create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any()))
           .thenReturn(
-              new ProviderResponse(user1.getUsername(), null, ProviderResponseStatus.OK, null));
+              new ProviderResponse(
+                  user1.getUsername(), null, ProviderResponseStatus.OK, null, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(

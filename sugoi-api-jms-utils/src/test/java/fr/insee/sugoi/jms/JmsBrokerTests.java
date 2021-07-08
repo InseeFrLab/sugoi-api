@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jms.core.BrowserCallback;
 import org.springframework.jms.core.JmsTemplate;
@@ -45,7 +46,9 @@ public class JmsBrokerTests {
 
   @Autowired JmsWriter jmsWriter;
 
-  @Autowired JmsTemplate jmsTemplate;
+  @Autowired
+  @Qualifier("synchronous")
+  JmsTemplate jmsTemplate;
 
   @Test
   @SuppressWarnings("unchecked")

@@ -21,8 +21,7 @@ public class Application implements Serializable {
   private String owner;
   private List<Group> groups;
 
-  public Application() {
-  }
+  public Application() {}
 
   public List<Group> getGroups() {
     return this.groups;

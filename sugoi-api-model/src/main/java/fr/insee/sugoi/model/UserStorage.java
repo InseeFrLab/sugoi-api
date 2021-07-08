@@ -70,7 +70,14 @@ public class UserStorage implements Serializable {
 
   @Override
   public String toString() {
-    return "UserStorage [name=" + name + ", organizationSource=" + organizationSource + ", properties=" + properties
-        + ", userSource=" + userSource + "]";
+    return "UserStorage [name="
+        + name
+        + ", organizationSource="
+        + organizationSource
+        + ", properties="
+        + properties
+        + ", userSource="
+        + userSource
+        + "]";
   }
 }

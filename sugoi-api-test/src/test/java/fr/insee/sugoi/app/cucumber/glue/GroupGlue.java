@@ -21,23 +21,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.app.cucumber.utils.StepData;
 import fr.insee.sugoi.model.Group;
 import fr.insee.sugoi.model.paging.PageResult;
-import io.cucumber.java.Before;
-import io.cucumber.java.Scenario;
 import io.cucumber.java.en.Then;
 import java.util.stream.Collectors;
 
 public class GroupGlue {
-  private Scenario scenario;
 
   private StepData stepData;
 
   public GroupGlue(StepData stepData) {
     this.stepData = stepData;
-  }
-
-  @Before
-  public void before(Scenario scenario) {
-    this.scenario = scenario;
   }
 
   @Then("the client expect to receive a list of groups")

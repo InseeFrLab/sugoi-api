@@ -295,7 +295,7 @@ public class UserController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     URI location =
         ServletUriComponentsBuilder.fromCurrentRequest()
@@ -507,7 +507,7 @@ public class UserController {
                         .map(String::toUpperCase)
                         .collect(Collectors.toList())),
                 isAsynchronous,
-                null,
+                transactionId,
                 isUrgent));
     return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
         .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
@@ -564,7 +564,7 @@ public class UserController {
         (String) foundUser.getMetadatas().get(GlobalKeysConfig.USERSTORAGE),
         isAsynchronous,
         isUrgent,
-        id,
+        transactionId,
         authentication);
   }
 

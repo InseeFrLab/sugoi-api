@@ -13,22 +13,22 @@
 */
 package fr.insee.sugoi.jms.model;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BrokerRequest implements Serializable {
+public class BrokerRequest {
 
   private String method;
+  // maybe too generic, we always have a provider request, a realm , a userstorage
   private Map<String, Object> methodParams = new HashMap<>();
+  private String correlationId;
 
   public BrokerRequest(String method, Map<String, Object> methodParams) {
     this.method = method;
     this.methodParams = methodParams;
   }
 
-  public BrokerRequest() {
-  }
+  public BrokerRequest() {}
 
   public String getMethod() {
     return this.method;
@@ -46,4 +46,11 @@ public class BrokerRequest implements Serializable {
     this.methodParams.put(name, value);
   }
 
+  public String getCorrelationId() {
+    return correlationId;
+  }
+
+  public void setCorrelationId(String correlationId) {
+    this.correlationId = correlationId;
+  }
 }

@@ -22,8 +22,7 @@ public class ProviderRequest implements Serializable {
   private String transactionId;
   private boolean urgent;
 
-  public ProviderRequest() {
-  }
+  public ProviderRequest() {}
 
   public ProviderRequest(SugoiUser sugoiUser, boolean asynchronousAllowed, String transactionId) {
     this.sugoiUser = sugoiUser;
@@ -31,7 +30,8 @@ public class ProviderRequest implements Serializable {
     this.transactionId = transactionId;
   }
 
-  public ProviderRequest(SugoiUser sugoiUser, boolean asynchronousAllowed, String transactionId, boolean isUrgent) {
+  public ProviderRequest(
+      SugoiUser sugoiUser, boolean asynchronousAllowed, String transactionId, boolean isUrgent) {
     this.sugoiUser = sugoiUser;
     this.asynchronousAllowed = asynchronousAllowed;
     this.transactionId = transactionId;

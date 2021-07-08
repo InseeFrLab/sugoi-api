@@ -15,7 +15,6 @@ package fr.insee.sugoi.config.file;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.core.model.ProviderRequest;
 import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
@@ -25,6 +24,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,14 +55,11 @@ public class LocalFileRealmProviderDAO implements RealmProvider {
   private ObjectMapper mapper = new ObjectMapper();
 
   @Override
-  public Realm load(String realmName) {
+  public Optional<Realm> load(String realmName) {
     if (realms == null) {
       realms = findAll();
     }
-    return realms.stream()
-        .filter(r -> r.getName().equalsIgnoreCase(realmName))
-        .findFirst()
-        .orElseThrow(() -> new RealmNotFoundException(realmName + " not found"));
+    return realms.stream().filter(r -> r.getName().equalsIgnoreCase(realmName)).findFirst();
   }
 
   @Override
