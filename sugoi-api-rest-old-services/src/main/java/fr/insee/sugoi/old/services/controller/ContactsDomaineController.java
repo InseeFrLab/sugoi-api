@@ -17,6 +17,8 @@ import fr.insee.sugoi.converter.mapper.OuganextSugoiMapper;
 import fr.insee.sugoi.converter.ouganext.Contact;
 import fr.insee.sugoi.converter.ouganext.Contacts;
 import fr.insee.sugoi.converter.ouganext.Organisation;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.Habilitation;
 import fr.insee.sugoi.model.User;
@@ -44,6 +46,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -107,7 +111,8 @@ public class ContactsDomaineController {
       @Parameter(description = "the id of the contact if not already used", required = false)
           @RequestHeader(value = "Slug", required = false)
           String slug,
-      @Parameter(description = "Contact to create", required = true) @RequestBody Contact contact) {
+      @Parameter(description = "Contact to create", required = true) @RequestBody Contact contact,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     User sugoiUser = ouganextSugoiMapper.serializeToSugoi(contact, User.class);
@@ -119,7 +124,20 @@ public class ContactsDomaineController {
     } else if (sugoiUser.getUsername() == null) {
       sugoiUser.setUsername(UUID.randomUUID().toString());
     }
-    userService.create(realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), sugoiUser);
+    userService.create(
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        sugoiUser,
+        new ProviderRequest(
+            new SugoiUser(
+                authentication.getName(),
+                authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toList())),
+            false,
+            null,
+            false));
     String request = ServletUriComponentsBuilder.fromCurrentRequestUri().build().toString();
     String location =
         request.substring(0, request.lastIndexOf("/")) + "/contact/" + sugoiUser.getUsername();

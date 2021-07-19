@@ -13,7 +13,9 @@
 */
 package fr.insee.sugoi.model;
 
-public class Habilitation {
+import java.io.Serializable;
+
+public class Habilitation implements Serializable {
   private String application;
   private String role;
   private String property;

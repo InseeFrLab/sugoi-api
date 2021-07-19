@@ -15,13 +15,17 @@ package fr.insee.sugoi.services.controller;
 
 import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
 import fr.insee.sugoi.core.exceptions.AppCannotManagedAttributeException;
+import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.PermissionService;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.User;
+import fr.insee.sugoi.services.Utils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,16 +39,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -107,15 +110,28 @@ public class AppManagedUserAttributeController {
           String attributeKey,
       @Parameter(description = "value of attribute to add", required = true)
           @PathVariable("app-managed-attribute-value")
-          String attributeValue) {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+          String attributeValue,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
     List<String> roles =
         authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .map(String::toUpperCase)
             .collect(Collectors.toList());
     SugoiUser sugoiUser = new SugoiUser(authentication.getName(), roles);
-    Realm _realm = realmProvider.load(realm);
+    Realm _realm =
+        realmProvider
+            .load(realm)
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     List<String> attributes_allowed =
         Arrays.asList(
             _realm
@@ -127,9 +143,27 @@ public class AppManagedUserAttributeController {
       if (attributes_allowed.contains(attributeKey.toUpperCase())) {
 
         if (permissionService.isWriter(sugoiUser, realm, storage)) {
-          userService.addAppManagedAttribute(realm, storage, id, attributeKey, attributeValue);
-          return ResponseEntity.status(HttpStatus.OK)
-              .body(userService.findById(realm, storage, id));
+          ProviderResponse response =
+              userService.addAppManagedAttribute(
+                  realm,
+                  storage,
+                  id,
+                  attributeKey,
+                  attributeValue,
+                  new ProviderRequest(
+                      new SugoiUser(
+                          authentication.getName(),
+                          authentication.getAuthorities().stream()
+                              .map(GrantedAuthority::getAuthority)
+                              .map(String::toUpperCase)
+                              .collect(Collectors.toList())),
+                      isAsynchronous,
+                      null,
+                      isUrgent));
+          return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+              .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+              .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+              .build();
         } else {
           String pattern_of_attribute =
               _realm
@@ -139,9 +173,27 @@ public class AppManagedUserAttributeController {
                   .split(",")[attributes_allowed.indexOf(attributeKey.toUpperCase())];
           if (permissionService.isValidAttributeAccordingAttributePattern(
               sugoiUser, realm, storage, pattern_of_attribute, attributeValue)) {
-            userService.addAppManagedAttribute(realm, storage, id, attributeKey, attributeValue);
-            return ResponseEntity.status(HttpStatus.OK)
-                .body(userService.findById(realm, storage, id));
+            ProviderResponse response =
+                userService.addAppManagedAttribute(
+                    realm,
+                    storage,
+                    id,
+                    attributeKey,
+                    attributeValue,
+                    new ProviderRequest(
+                        new SugoiUser(
+                            authentication.getName(),
+                            authentication.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .map(String::toUpperCase)
+                                .collect(Collectors.toList())),
+                        isAsynchronous,
+                        null,
+                        isUrgent));
+            return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+                .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+                .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+                .build();
           }
 
           // If no match found then app cannot managed attribute or attribute doesn't math
@@ -205,15 +257,28 @@ public class AppManagedUserAttributeController {
           String attributeKey,
       @Parameter(description = "value of attribute to add", required = true)
           @PathVariable("app-managed-attribute-value")
-          String attributeValue) {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+          String attributeValue,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
     List<String> roles =
         authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .map(String::toUpperCase)
             .collect(Collectors.toList());
     SugoiUser sugoiUser = new SugoiUser(authentication.getName(), roles);
-    Realm _realm = realmProvider.load(realm);
+    Realm _realm =
+        realmProvider
+            .load(realm)
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     List<String> attributes_allowed =
         Arrays.asList(
             _realm
@@ -225,9 +290,27 @@ public class AppManagedUserAttributeController {
       if (attributes_allowed.contains(attributeKey.toUpperCase())) {
 
         if (permissionService.isWriter(sugoiUser, realm, storage)) {
-          userService.deleteAppManagedAttribute(realm, storage, id, attributeKey, attributeValue);
-          return ResponseEntity.status(HttpStatus.OK)
-              .body(userService.findById(realm, storage, id));
+          ProviderResponse response =
+              userService.deleteAppManagedAttribute(
+                  realm,
+                  storage,
+                  id,
+                  attributeKey,
+                  attributeValue,
+                  new ProviderRequest(
+                      new SugoiUser(
+                          authentication.getName(),
+                          authentication.getAuthorities().stream()
+                              .map(GrantedAuthority::getAuthority)
+                              .map(String::toUpperCase)
+                              .collect(Collectors.toList())),
+                      isAsynchronous,
+                      transactionId,
+                      isUrgent));
+          return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+              .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+              .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+              .build();
         } else {
           String pattern_of_attribute =
               _realm
@@ -237,9 +320,27 @@ public class AppManagedUserAttributeController {
                   .split(",")[attributes_allowed.indexOf(attributeKey.toUpperCase())];
           if (permissionService.isValidAttributeAccordingAttributePattern(
               sugoiUser, realm, storage, pattern_of_attribute, attributeValue)) {
-            userService.deleteAppManagedAttribute(realm, storage, id, attributeKey, attributeValue);
-            return ResponseEntity.status(HttpStatus.OK)
-                .body(userService.findById(realm, storage, id));
+            ProviderResponse response =
+                userService.deleteAppManagedAttribute(
+                    realm,
+                    storage,
+                    id,
+                    attributeKey,
+                    attributeValue,
+                    new ProviderRequest(
+                        new SugoiUser(
+                            authentication.getName(),
+                            authentication.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .map(String::toUpperCase)
+                                .collect(Collectors.toList())),
+                        isAsynchronous,
+                        transactionId,
+                        isUrgent));
+            return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+                .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+                .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+                .build();
           }
 
           // If no match found then app cannot managed attribute or attribute doesn't math
@@ -298,7 +399,17 @@ public class AppManagedUserAttributeController {
           String attributeKey,
       @Parameter(description = "value of attribute to add", required = true)
           @PathVariable("app-managed-attribute-value")
-          String attributeValue) {
+          String attributeValue,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
     User foundUser =
         userService
@@ -310,7 +421,10 @@ public class AppManagedUserAttributeController {
         (String) foundUser.getMetadatas().get(GlobalKeysConfig.USERSTORAGE),
         id,
         attributeKey,
-        attributeValue);
+        isAsynchronous,
+        isUrgent,
+        attributeValue,
+        authentication);
   }
 
   @DeleteMapping(
@@ -352,7 +466,17 @@ public class AppManagedUserAttributeController {
           String attributeKey,
       @Parameter(description = "value of attribute to add", required = true)
           @PathVariable("app-managed-attribute-value")
-          String attributeValue) {
+          String attributeValue,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
     User foundUser =
         userService
@@ -364,6 +488,9 @@ public class AppManagedUserAttributeController {
         (String) foundUser.getMetadatas().get(GlobalKeysConfig.USERSTORAGE),
         id,
         attributeKey,
-        attributeValue);
+        isUrgent,
+        isUrgent,
+        attributeValue,
+        authentication);
   }
 }

@@ -17,6 +17,9 @@ import fr.insee.sugoi.converter.mapper.OuganextSugoiMapper;
 import fr.insee.sugoi.converter.ouganext.Organisation;
 import fr.insee.sugoi.converter.ouganext.Organisations;
 import fr.insee.sugoi.core.exceptions.OrganizationNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.OrganizationService;
 import fr.insee.sugoi.model.Organization;
 import fr.insee.sugoi.model.paging.PageResult;
@@ -41,6 +44,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -120,7 +125,8 @@ public class OrganisationDomaineController {
           @RequestParam(name = "creation", required = false)
           boolean creation,
       @Parameter(description = "Organization to create or modify", required = true) @RequestBody
-          Organisation organisation) {
+          Organisation organisation,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     organisation.setIdentifiant(id);
@@ -128,20 +134,54 @@ public class OrganisationDomaineController {
         ouganextSugoiMapper.serializeToSugoi(organisation, Organization.class);
 
     if (creation) {
-      Organization orgCreated =
+      ProviderResponse response =
           organizationService.create(
-              realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), sugoiOrganization);
+              realmUserStorage.getRealm(),
+              realmUserStorage.getUserStorage(),
+              sugoiOrganization,
+              new ProviderRequest(
+                  new SugoiUser(
+                      authentication.getName(),
+                      authentication.getAuthorities().stream()
+                          .map(GrantedAuthority::getAuthority)
+                          .map(String::toUpperCase)
+                          .collect(Collectors.toList())),
+                  false,
+                  null,
+                  false));
       return ResponseEntity.status(HttpStatus.OK)
-          .body(ouganextSugoiMapper.serializeToOuganext(orgCreated, Organisation.class));
+          .body(
+              ouganextSugoiMapper.serializeToOuganext(
+                  organizationService.findById(
+                      realmUserStorage.getRealm(),
+                      realmUserStorage.getUserStorage(),
+                      response.getEntityId()),
+                  Organisation.class));
     }
 
-    organizationService.update(
-        realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), sugoiOrganization);
+    ProviderResponse response =
+        organizationService.update(
+            realmUserStorage.getRealm(),
+            realmUserStorage.getUserStorage(),
+            sugoiOrganization,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                false,
+                null,
+                false));
     return ResponseEntity.status(HttpStatus.OK)
         .body(
             ouganextSugoiMapper.serializeToOuganext(
                 organizationService
-                    .findById(realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), id)
+                    .findById(
+                        realmUserStorage.getRealm(),
+                        realmUserStorage.getUserStorage(),
+                        response.getEntityId())
                     .get(),
                 Organisation.class));
   }
@@ -232,10 +272,24 @@ public class OrganisationDomaineController {
           String domaine,
       @Parameter(description = "Organization's id to delete", required = true)
           @PathVariable(name = "id", required = true)
-          String id) {
+          String id,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
-    organizationService.delete(realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), id);
+    organizationService.delete(
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        id,
+        new ProviderRequest(
+            new SugoiUser(
+                authentication.getName(),
+                authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toList())),
+            false,
+            null,
+            false));
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
@@ -279,7 +333,8 @@ public class OrganisationDomaineController {
               description = "filled in header Slug, the id of the organisation if not already used",
               required = false)
           @RequestHeader(value = "Slug", required = false)
-          String slug) {
+          String slug,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     Organization sugoiOrganization =
@@ -293,7 +348,19 @@ public class OrganisationDomaineController {
       sugoiOrganization.setIdentifiant(UUID.randomUUID().toString());
     }
     organizationService.create(
-        realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), sugoiOrganization);
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        sugoiOrganization,
+        new ProviderRequest(
+            new SugoiUser(
+                authentication.getName(),
+                authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toList())),
+            false,
+            null,
+            false));
     String request = ServletUriComponentsBuilder.fromCurrentRequestUri().build().toString();
     String location =
         request.substring(0, request.lastIndexOf("/"))

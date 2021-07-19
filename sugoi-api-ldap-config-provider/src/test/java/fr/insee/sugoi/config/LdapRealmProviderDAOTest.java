@@ -17,6 +17,7 @@ import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
 
 import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
+import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.model.Realm;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,11 @@ public class LdapRealmProviderDAOTest {
 
   @Test
   public void loadUniStorage() {
-    Realm realm = ldapRealmProviderDAOImpl.load("domaine1");
+    Realm realm =
+        ldapRealmProviderDAOImpl
+            .load("domaine1")
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     assertThat("Should have appSource", realm.getAppSource(), is("applitest"));
     assertThat(
         "Default userstorage should have usersource",
@@ -43,7 +48,11 @@ public class LdapRealmProviderDAOTest {
 
   @Test
   public void loadMultiStorage() {
-    Realm realm = ldapRealmProviderDAOImpl.load("domaine2");
+    Realm realm =
+        ldapRealmProviderDAOImpl
+            .load("domaine2")
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     assertThat("Should have two userstorages", realm.getUserStorages().size(), is(2));
     assertThat(
         "First userstorage is monUserStorage",
@@ -83,7 +92,11 @@ public class LdapRealmProviderDAOTest {
 
   @Test
   public void loadRealmWithConfig() {
-    Realm realm = ldapRealmProviderDAOImpl.load("domaine1");
+    Realm realm =
+        ldapRealmProviderDAOImpl
+            .load("domaine1")
+            .orElseThrow(
+                () -> new RealmNotFoundException("The realm " + "test" + " doesn't exist "));
     assertThat(
         "app_managed_attribute_key should be inseeGroupeDefaut",
         realm.getProperties().get(GlobalKeysConfig.APP_MANAGED_ATTRIBUTE_KEYS_LIST),

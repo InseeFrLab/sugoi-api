@@ -38,17 +38,18 @@ import org.apache.commons.net.util.Base64;
 
 public class GenericGlue {
 
-  private Scenario scenario;
-
   @Before
   public void before(Scenario scenario) {
     this.scenario = scenario;
   }
 
+  private Scenario scenario;
   private StepData stepData;
 
-  String basicUsername = null;
-  String basicPassword = null;
+  private String basicUsername = null;
+  private String basicPassword = null;
+
+  private Map<String, String> headers = new HashMap<>();
 
   public GenericGlue(StepData stepData) {
     this.stepData = stepData;
@@ -74,6 +75,21 @@ public class GenericGlue {
   public void select_role(String username, String password) throws Exception {
     basicUsername = username;
     basicPassword = password;
+  }
+
+  @Given("the client make an asynchronous request")
+  public void async_request() {
+    headers.put("X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", "true");
+  }
+
+  @Given("the client check status for transaction {}")
+  public void check_status(int id) {
+    headers.put("X-SUGOI-TRANSACTION-ID", String.valueOf(id));
+  }
+
+  @Given("the client want to use the urgent queue")
+  public void urgent_queue() {
+    headers.put("X-SUGOI-URGENT-REQUEST", "true");
   }
 
   @When("the client perform {} request with body on url {} body:")
@@ -152,6 +168,11 @@ public class GenericGlue {
   @And("show body received")
   public void body_received() throws Throwable {
     scenario.log(stepData.getLatestResponse().getBody());
+  }
+
+  @And("show header {} ")
+  public void headers_received(String name) throws Throwable {
+    scenario.log(stepData.getLatestResponse().getHeader(name).toString());
   }
 
   // the metric CREATE_USER is 1

@@ -13,7 +13,11 @@
 */
 package fr.insee.sugoi.core.service;
 
+import fr.insee.sugoi.core.exceptions.ApplicationAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.ApplicationNotCreatedException;
+import fr.insee.sugoi.core.exceptions.ApplicationNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Application;
 import fr.insee.sugoi.model.paging.PageResult;
 import fr.insee.sugoi.model.paging.PageableResult;
@@ -31,7 +35,7 @@ public interface ApplicationService {
    * @throws ApplicationAlreadyExistException if application already exist in realm
    * @throws ApplicationNotCreatedException if fail to create application
    */
-  Application create(String realm, Application application);
+  ProviderResponse create(String realm, Application application, ProviderRequest providerRequest);
 
   /**
    * if application exists, updates application, and if the application has groups, they are also
@@ -41,7 +45,7 @@ public interface ApplicationService {
    * @param application
    * @throws ApplicationNotFoundException if application doesn't exist in realm
    */
-  void update(String realm, Application application);
+  ProviderResponse update(String realm, Application application, ProviderRequest providerRequest);
 
   /**
    * if application exists, deletes the application from the realm, all the groups from the
@@ -51,7 +55,7 @@ public interface ApplicationService {
    * @param id
    * @throws ApplicationNotFoundException if application doesn't exist in realm
    */
-  void delete(String realm, String id);
+  ProviderResponse delete(String realm, String id, ProviderRequest providerRequest);
 
   /**
    * Finds an application by its name

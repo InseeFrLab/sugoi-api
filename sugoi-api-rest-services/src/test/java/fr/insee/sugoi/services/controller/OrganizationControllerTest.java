@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.commons.services.controller.technics.SugoiAdviceController;
 import fr.insee.sugoi.core.exceptions.OrganizationAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.OrganizationNotFoundException;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.service.OrganizationService;
 import fr.insee.sugoi.model.Organization;
 import fr.insee.sugoi.model.paging.PageResult;
@@ -164,7 +166,8 @@ public class OrganizationControllerTest {
               .with(csrf());
 
       mockMvc.perform(requestBuilder).andReturn();
-      verify(organizationService).delete(Mockito.any(), Mockito.any(), Mockito.any());
+      verify(organizationService)
+          .delete(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -180,7 +183,11 @@ public class OrganizationControllerTest {
       Mockito.when(organizationService.findById("domaine1", null, "SimpleOrga"))
           .thenReturn(Optional.of(organization2))
           .thenReturn(Optional.of(organization2Updated));
-
+      Mockito.doReturn(
+              new ProviderResponse(
+                  "", "requestId", ProviderResponseStatus.OK, organization2Updated, null))
+          .when(organizationService)
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/organizations/SimpleOrga")
               .contentType(MediaType.APPLICATION_JSON)
@@ -190,7 +197,8 @@ public class OrganizationControllerTest {
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      verify(organizationService).update(Mockito.anyString(), Mockito.isNull(), Mockito.any());
+      verify(organizationService)
+          .update(Mockito.anyString(), Mockito.isNull(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get updated organization",
           objectMapper
@@ -215,9 +223,11 @@ public class OrganizationControllerTest {
   public void postShouldCallPostServiceAndReturnNewApp() {
 
     try {
-      Mockito.when(organizationService.create(Mockito.any(), Mockito.any(), Mockito.any()))
-          .thenReturn(organization1);
 
+      Mockito.doReturn(
+              new ProviderResponse("", "requestId", ProviderResponseStatus.OK, organization1, null))
+          .when(organizationService)
+          .create(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
                   "/realms/domaine1/storages/Profil_domaine1_WebServiceLdap/organizations")
@@ -227,7 +237,8 @@ public class OrganizationControllerTest {
               .with(csrf());
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
-      verify(organizationService).create(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+      verify(organizationService)
+          .create(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any());
       System.out.println(response.getContentAsString());
       assertThat(
           "Should get new organization",
@@ -277,8 +288,12 @@ public class OrganizationControllerTest {
       Mockito.when(organizationService.findById(Mockito.any(), Mockito.any(), Mockito.any()))
           .thenThrow(OrganizationNotFoundException.class)
           .thenReturn(Optional.of(organization1));
-      Mockito.when(organizationService.create(Mockito.anyString(), Mockito.any(), Mockito.any()))
-          .thenReturn(organization1);
+      Mockito.when(
+              organizationService.create(
+                  Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any()))
+          .thenReturn(
+              new ProviderResponse(
+                  organization1.getIdentifiant(), null, ProviderResponseStatus.OK, null, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post(
@@ -370,7 +385,9 @@ public class OrganizationControllerTest {
   public void get409WhenCreatingAlreadyExistingOrganization() {
     try {
 
-      Mockito.when(organizationService.create(Mockito.any(), Mockito.any(), Mockito.any()))
+      Mockito.when(
+              organizationService.create(
+                  Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
           .thenThrow(new OrganizationAlreadyExistException(""));
 
       RequestBuilder requestBuilder =
@@ -445,7 +462,7 @@ public class OrganizationControllerTest {
 
       Mockito.doThrow(new OrganizationNotFoundException(""))
           .when(organizationService)
-          .update(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+          .update(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/organizations/BigOrga")
               .contentType(MediaType.APPLICATION_JSON)
@@ -471,7 +488,7 @@ public class OrganizationControllerTest {
 
       Mockito.doThrow(new OrganizationNotFoundException(""))
           .when(organizationService)
-          .delete(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+          .delete(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.any());
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.delete("/realms/domaine1/organizations/dontexist")

@@ -25,6 +25,7 @@ import fr.insee.sugoi.model.Organization;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.UserStorage;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -66,7 +67,7 @@ public class OrganizationServiceTest {
 
   @Test
   public void getOrganizationOnMultipleStorage() {
-    Mockito.when(realmProvider.load("realm")).thenReturn(realm);
+    Mockito.when(realmProvider.load("realm")).thenReturn(Optional.of(realm));
     Mockito.when(storeProvider.getReaderStore(Mockito.any(), Mockito.any()))
         .thenReturn(readerStore);
     Mockito.when(readerStore.getOrganization(Mockito.anyString()))

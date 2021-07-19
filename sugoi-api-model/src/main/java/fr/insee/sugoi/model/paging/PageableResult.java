@@ -13,7 +13,9 @@
 */
 package fr.insee.sugoi.model.paging;
 
-public class PageableResult {
+import java.io.Serializable;
+
+public class PageableResult implements Serializable {
   private static final int TAILLE_RECHERCHE_DEFAUT = 20;
 
   private int size = TAILLE_RECHERCHE_DEFAUT;

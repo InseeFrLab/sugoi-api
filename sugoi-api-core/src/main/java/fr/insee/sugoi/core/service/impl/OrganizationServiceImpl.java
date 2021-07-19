@@ -17,9 +17,11 @@ import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
 import fr.insee.sugoi.core.event.configuration.EventKeysConfig;
 import fr.insee.sugoi.core.event.model.SugoiEventTypeEnum;
 import fr.insee.sugoi.core.event.publisher.SugoiEventPublisher;
-import fr.insee.sugoi.core.exceptions.OrganizationAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.OrganizationNotCreatedException;
-import fr.insee.sugoi.core.exceptions.OrganizationNotFoundException;
+import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.OrganizationService;
 import fr.insee.sugoi.core.store.ReaderStore;
@@ -49,27 +51,26 @@ public class OrganizationServiceImpl implements OrganizationService {
   @Autowired private RealmProvider realmProvider;
 
   @Override
-  public Organization create(String realm, String storageName, Organization organization) {
+  public ProviderResponse create(
+      String realm,
+      String storageName,
+      Organization organization,
+      ProviderRequest providerRequest) {
     try {
-      if (findById(realm, storageName, organization.getIdentifiant()).isEmpty()) {
-        String orgName =
-            storeProvider
-                .getWriterStore(realm, storageName)
-                .createOrganization(organization)
-                .getIdentifiant();
-        sugoiEventPublisher.publishCustomEvent(
-            realm,
-            storageName,
-            SugoiEventTypeEnum.CREATE_ORGANIZATION,
-            Map.ofEntries(Map.entry(EventKeysConfig.ORGANIZATION, organization)));
-        return findById(realm, storageName, orgName)
-            .orElseThrow(
-                () ->
-                    new OrganizationNotCreatedException(
-                        "Cannot create organization " + orgName + " in realm " + realm));
+      ProviderResponse response =
+          storeProvider
+              .getWriterStore(realm, storageName)
+              .createOrganization(organization, providerRequest);
+      sugoiEventPublisher.publishCustomEvent(
+          realm,
+          storageName,
+          SugoiEventTypeEnum.CREATE_ORGANIZATION,
+          Map.ofEntries(Map.entry(EventKeysConfig.ORGANIZATION, organization)));
+      if (!providerRequest.isAsynchronousAllowed()
+          && response.getStatus().equals(ProviderResponseStatus.OK)) {
+        response.setEntity(findById(realm, storageName, organization.getIdentifiant()).get());
       }
-      throw new OrganizationAlreadyExistException(
-          "Organization " + organization.getIdentifiant() + " already exist in realm " + realm);
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,
@@ -78,31 +79,28 @@ public class OrganizationServiceImpl implements OrganizationService {
           Map.ofEntries(
               Map.entry(EventKeysConfig.ORGANIZATION, organization),
               Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof OrganizationNotCreatedException) {
-        throw (OrganizationNotCreatedException) e;
-      } else if (e instanceof OrganizationAlreadyExistException) {
-        throw (OrganizationAlreadyExistException) e;
-      } else {
-        throw e;
-      }
+      throw new OrganizationNotCreatedException(
+          "Cannot create organization "
+              + organization.getIdentifiant()
+              + " in realm "
+              + realm
+              + " because "
+              + e.toString());
     }
   }
 
   @Override
-  public void delete(String realm, String storageName, String id) {
+  public ProviderResponse delete(
+      String realm, String storageName, String id, ProviderRequest providerRequest) {
     try {
-
-      findById(realm, storageName, id)
-          .orElseThrow(
-              () ->
-                  new OrganizationNotFoundException(
-                      "Cannot find organization " + id + " in realm " + realm));
-      storeProvider.getWriterStore(realm, storageName).deleteOrganization(id);
+      ProviderResponse response =
+          storeProvider.getWriterStore(realm, storageName).deleteOrganization(id, providerRequest);
       sugoiEventPublisher.publishCustomEvent(
           realm,
           storageName,
           SugoiEventTypeEnum.DELETE_ORGANIZATION,
           Map.ofEntries(Map.entry(EventKeysConfig.ORGANIZATION_ID, id)));
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,
@@ -111,11 +109,7 @@ public class OrganizationServiceImpl implements OrganizationService {
           Map.ofEntries(
               Map.entry(EventKeysConfig.ORGANIZATION_ID, id),
               Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof OrganizationNotFoundException) {
-        throw (OrganizationNotFoundException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 
@@ -129,7 +123,11 @@ public class OrganizationServiceImpl implements OrganizationService {
           org.addMetadatas(EventKeysConfig.REALM, realm.toLowerCase());
           org.addMetadatas(EventKeysConfig.USERSTORAGE, storage.toLowerCase());
         } else {
-          Realm r = realmProvider.load(realm);
+          Realm r =
+              realmProvider
+                  .load(realm)
+                  .orElseThrow(
+                      () -> new RealmNotFoundException("The realm " + realm + " doesn't exist "));
           for (UserStorage us : r.getUserStorages()) {
             try {
               org = storeProvider.getReaderStore(realm, us.getName()).getOrganization(id);
@@ -184,7 +182,11 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .getReaderStore(realm, storageName)
                 .searchOrganizations(organizationFilter, pageableResult, typeRecherche.name());
       } else {
-        Realm r = realmProvider.load(realm);
+        Realm r =
+            realmProvider
+                .load(realm)
+                .orElseThrow(
+                    () -> new RealmNotFoundException("The realm " + realm + " doesn't exist "));
         for (UserStorage us : r.getUserStorages()) {
           ReaderStore readerStore =
               storeProvider.getStoreForUserStorage(realm, us.getName()).getReader();
@@ -243,22 +245,27 @@ public class OrganizationServiceImpl implements OrganizationService {
   }
 
   @Override
-  public void update(String realm, String storageName, Organization organization) {
+  public ProviderResponse update(
+      String realm,
+      String storageName,
+      Organization organization,
+      ProviderRequest providerRequest) {
     try {
-      findById(realm, storageName, organization.getIdentifiant())
-          .orElseThrow(
-              () ->
-                  new OrganizationNotFoundException(
-                      "Cannot find organization "
-                          + organization.getIdentifiant()
-                          + " in realm "
-                          + realm));
-      storeProvider.getWriterStore(realm, storageName).updateOrganization(organization);
+
+      ProviderResponse response =
+          storeProvider
+              .getWriterStore(realm, storageName)
+              .updateOrganization(organization, providerRequest);
       sugoiEventPublisher.publishCustomEvent(
           realm,
           storageName,
           SugoiEventTypeEnum.UPDATE_ORGANIZATION,
           Map.ofEntries(Map.entry(EventKeysConfig.ORGANIZATION, organization)));
+      if (!providerRequest.isAsynchronousAllowed()
+          && response.getStatus().equals(ProviderResponseStatus.OK)) {
+        response.setEntity(findById(realm, storageName, organization.getIdentifiant()).get());
+      }
+      return response;
     } catch (Exception e) {
       sugoiEventPublisher.publishCustomEvent(
           realm,
@@ -267,11 +274,7 @@ public class OrganizationServiceImpl implements OrganizationService {
           Map.ofEntries(
               Map.entry(EventKeysConfig.ORGANIZATION, organization),
               Map.entry(EventKeysConfig.ERROR, e.toString())));
-      if (e instanceof OrganizationNotFoundException) {
-        throw (OrganizationNotFoundException) e;
-      } else {
-        throw e;
-      }
+      throw e;
     }
   }
 }

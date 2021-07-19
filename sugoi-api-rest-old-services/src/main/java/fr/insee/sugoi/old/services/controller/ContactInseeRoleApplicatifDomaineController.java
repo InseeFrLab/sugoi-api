@@ -14,6 +14,8 @@
 package fr.insee.sugoi.old.services.controller;
 
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.User;
 import fr.insee.sugoi.old.services.model.ConverterDomainRealm;
@@ -34,6 +36,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -138,6 +143,14 @@ public class ContactInseeRoleApplicatifDomaineController {
       @Parameter(description = "Name of the inseeRoleApplicatif to add", required = true)
           @PathVariable(name = "inseerole", required = true)
           String inseeRole) {
+
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    List<String> roles =
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .map(String::toUpperCase)
+            .collect(Collectors.toList());
+
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     User user =
@@ -156,7 +169,11 @@ public class ContactInseeRoleApplicatifDomaineController {
       userRoles.add(inseeRole);
       user.getAttributes().put("insee_roles_applicatifs", userRoles);
     }
-    userService.update(realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), user);
+    userService.update(
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        user,
+        new ProviderRequest(new SugoiUser(authentication.getName(), roles), false, null, false));
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
@@ -196,6 +213,14 @@ public class ContactInseeRoleApplicatifDomaineController {
       @Parameter(description = "Name of the inseeRoleApplicatif to delete", required = true)
           @PathVariable(name = "inseerole", required = true)
           String inseeRole) {
+
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    List<String> roles =
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .map(String::toUpperCase)
+            .collect(Collectors.toList());
+
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     User user =
@@ -214,7 +239,11 @@ public class ContactInseeRoleApplicatifDomaineController {
                       .filter(role -> !role.equalsIgnoreCase(inseeRole))
                       .collect(Collectors.toList()));
     }
-    userService.update(realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), user);
+    userService.update(
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        user,
+        new ProviderRequest(new SugoiUser(authentication.getName(), roles), false, null, false));
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 }

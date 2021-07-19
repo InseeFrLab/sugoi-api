@@ -23,6 +23,7 @@ import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.impl.PermissionServiceImpl;
 import fr.insee.sugoi.model.Realm;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -135,7 +136,7 @@ public class PermissionServiceTests {
   @Test
   public void testgetAllowedAttributePattern() {
     try {
-      Mockito.when(realmProvider.load(Mockito.any())).thenReturn(realm);
+      Mockito.when(realmProvider.load(Mockito.any())).thenReturn(Optional.of(realm));
       SugoiUser sugoiUser =
           new SugoiUser("admin_wildcard", List.of("role_ASI_realm1_app1", "role_ASI_app2"));
       List<String> allowedAttributesPattern =

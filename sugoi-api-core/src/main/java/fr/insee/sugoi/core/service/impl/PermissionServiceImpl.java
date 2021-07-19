@@ -14,7 +14,6 @@
 package fr.insee.sugoi.core.service.impl;
 
 import fr.insee.sugoi.core.model.SugoiUser;
-import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.PermissionService;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.text.StrSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -47,8 +45,6 @@ public class PermissionServiceImpl implements PermissionService {
 
   @Value("${fr.insee.sugoi.api.regexp.role.application.manager:}")
   private List<String> applicationManagerRoleList;
-
-  @Autowired private RealmProvider realmProvider;
 
   public static final Logger logger = LoggerFactory.getLogger(PermissionService.class);
 

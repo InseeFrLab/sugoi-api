@@ -13,9 +13,10 @@
 */
 package fr.insee.sugoi.model;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class Application {
+public class Application implements Serializable {
   private String name;
   private String owner;
   private List<Group> groups;

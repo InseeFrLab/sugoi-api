@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.commons.services.controller.technics.SugoiAdviceController;
 import fr.insee.sugoi.core.exceptions.ApplicationAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.ApplicationNotFoundException;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.service.ApplicationService;
 import fr.insee.sugoi.model.Application;
 import fr.insee.sugoi.model.paging.PageResult;
@@ -167,9 +169,11 @@ public class ApplicationControllerTest {
           MockMvcRequestBuilders.delete("/realms/domaine1/applications/supprimemoi")
               .accept(MediaType.APPLICATION_JSON)
               .with(csrf());
-
+      Mockito.doReturn(new ProviderResponse("", "requestId", ProviderResponseStatus.OK, null, null))
+          .when(applicationService)
+          .delete(Mockito.any(), Mockito.any(), Mockito.any());
       mockMvc.perform(requestBuilder).andReturn();
-      verify(applicationService).delete("domaine1", "supprimemoi");
+      verify(applicationService).delete(Mockito.anyString(), Mockito.anyString(), Mockito.any());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -184,7 +188,11 @@ public class ApplicationControllerTest {
 
       Mockito.when(applicationService.findById("domaine1", "SuperAppli"))
           .thenReturn(Optional.of(application1Updated));
-
+      Mockito.doReturn(
+              new ProviderResponse(
+                  "", "requestId", ProviderResponseStatus.OK, application1Updated, null))
+          .when(applicationService)
+          .update(Mockito.any(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/applications/SuperAppli")
               .contentType(MediaType.APPLICATION_JSON)
@@ -194,7 +202,7 @@ public class ApplicationControllerTest {
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      verify(applicationService).update(Mockito.anyString(), Mockito.any());
+      verify(applicationService).update(Mockito.anyString(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get updated application",
           objectMapper.readValue(response.getContentAsString(), Application.class).getOwner(),
@@ -216,9 +224,10 @@ public class ApplicationControllerTest {
   public void postShouldCallPostServiceAndReturnNewApp() {
 
     try {
-      Mockito.when(applicationService.create(Mockito.anyString(), Mockito.any()))
-          .thenReturn(application1)
-          .thenReturn(application1);
+      Mockito.doReturn(
+              new ProviderResponse("", "requestId", ProviderResponseStatus.OK, application1, null))
+          .when(applicationService)
+          .create(Mockito.any(), Mockito.any(), Mockito.any());
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post("/realms/domaine1/applications")
@@ -228,7 +237,7 @@ public class ApplicationControllerTest {
               .with(csrf());
 
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
-      verify(applicationService).create(Mockito.anyString(), Mockito.any());
+      verify(applicationService).create(Mockito.any(), Mockito.any(), Mockito.any());
       assertThat(
           "Should get new application",
           objectMapper.readValue(response.getContentAsString(), Application.class).getName(),
@@ -272,8 +281,10 @@ public class ApplicationControllerTest {
   public void getObjectLocationInApplicationCreationResponse() {
     try {
 
-      Mockito.when(applicationService.create(Mockito.anyString(), Mockito.any()))
-          .thenReturn(application1);
+      Mockito.when(applicationService.create(Mockito.anyString(), Mockito.any(), Mockito.any()))
+          .thenReturn(
+              new ProviderResponse(
+                  application1.getName(), null, ProviderResponseStatus.OK, application1, null));
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.post("/realms/domaine1/applications")
@@ -363,7 +374,7 @@ public class ApplicationControllerTest {
   public void get409WhenCreatingAlreadyExistingApplication() {
     try {
 
-      Mockito.when(applicationService.create(Mockito.anyString(), Mockito.any()))
+      Mockito.when(applicationService.create(Mockito.anyString(), Mockito.any(), Mockito.any()))
           .thenThrow(
               new ApplicationAlreadyExistException(
                   "Application "
@@ -441,7 +452,7 @@ public class ApplicationControllerTest {
     try {
       Mockito.doThrow(new ApplicationNotFoundException(""))
           .when(applicationService)
-          .update(Mockito.anyString(), Mockito.any());
+          .update(Mockito.anyString(), Mockito.any(), Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.put("/realms/domaine1/applications/SuperAppli")
               .contentType(MediaType.APPLICATION_JSON)
@@ -467,7 +478,7 @@ public class ApplicationControllerTest {
 
       Mockito.doThrow(new ApplicationNotFoundException(""))
           .when(applicationService)
-          .delete(Mockito.anyString(), Mockito.anyString());
+          .delete(Mockito.anyString(), Mockito.anyString(), Mockito.any());
 
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.delete("/realms/domaine1/applications/dontexist")

@@ -13,7 +13,9 @@
 */
 package fr.insee.sugoi.model.paging;
 
-public enum SearchType {
+import java.io.Serializable;
+
+public enum SearchType implements Serializable {
   AND,
   OR
 }

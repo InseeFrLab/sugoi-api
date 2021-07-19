@@ -13,7 +13,9 @@
 */
 package fr.insee.sugoi.model.paging;
 
-public class PasswordPolicyConstants {
+import java.io.Serializable;
+
+public class PasswordPolicyConstants implements Serializable {
 
   public static final String CREATE_PASSWORD_WITH_UPPERCASE = "create_password_WITHUpperCase";
   public static final String CREATE_PASSWORD_WITH_LOWERCASE = "create_password_WITHLowerCase";

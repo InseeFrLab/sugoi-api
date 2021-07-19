@@ -14,10 +14,15 @@
 package fr.insee.sugoi.services.controller;
 
 import fr.insee.sugoi.core.exceptions.GroupNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.GroupService;
 import fr.insee.sugoi.model.Group;
 import fr.insee.sugoi.model.paging.PageResult;
 import fr.insee.sugoi.model.paging.PageableResult;
+import fr.insee.sugoi.services.Utils;
 import fr.insee.sugoi.services.view.GroupView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,18 +34,22 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -149,6 +158,16 @@ public class GroupController {
       @Parameter(description = "Name of application where to add group", required = true)
           @PathVariable(value = "application", required = true)
           String applicationName,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication,
       @Parameter(description = "Group to create", required = true) @RequestBody
           GroupView groupView) {
 
@@ -157,7 +176,21 @@ public class GroupController {
     group.setDescription(groupView.getDescription());
     group.setName(groupView.getName());
 
-    Group groupCreated = groupService.create(realm, applicationName, group);
+    ProviderResponse response =
+        groupService.create(
+            realm,
+            applicationName,
+            group,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
 
     URI location =
         ServletUriComponentsBuilder.fromCurrentRequest()
@@ -165,7 +198,11 @@ public class GroupController {
             .build()
             .toUri();
 
-    return ResponseEntity.created(location).body(groupCreated);
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, true, false))
+        .location(response.getStatus().equals(ProviderResponseStatus.OK) ? location : null)
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .body(response.getEntity() != null ? (Group) response.getEntity() : null);
   }
 
   @PutMapping(
@@ -204,6 +241,16 @@ public class GroupController {
       @Parameter(description = "Name of application which contains group", required = true)
           @PathVariable("application")
           String applicationName,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication,
       @Parameter(description = "Group to update", required = true) @RequestBody
           GroupView groupView) {
 
@@ -216,12 +263,28 @@ public class GroupController {
     group.setDescription(groupView.getDescription());
     group.setName(groupView.getName());
 
-    groupService.update(realm, applicationName, group);
+    ProviderResponse response =
+        groupService.update(
+            realm,
+            applicationName,
+            group,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
 
     URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
-    return ResponseEntity.status(HttpStatus.OK)
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, false))
         .header(HttpHeaders.LOCATION, location.toString())
-        .body(groupService.findById(realm, applicationName, id));
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .body(response.getEntity() != null ? (Group) response.getEntity() : null);
   }
 
   @DeleteMapping(
@@ -244,7 +307,7 @@ public class GroupController {
             content = {@Content(mediaType = "application/json")})
       })
   @PreAuthorize("@NewAuthorizeMethodDecider.isAppManager(#realm,#applicationName)")
-  public ResponseEntity<String> deleteGroups(
+  public ResponseEntity<ProviderResponse> deleteGroups(
       @Parameter(
               description = "Name of the realm where the operation will be made",
               required = true)
@@ -254,10 +317,37 @@ public class GroupController {
           @PathVariable("application")
           String applicationName,
       @Parameter(description = "Group's id to delete", required = true) @PathVariable("id")
-          String id) {
+          String id,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
-    groupService.delete(realm, applicationName, id);
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    ProviderResponse response =
+        groupService.delete(
+            realm,
+            applicationName,
+            id,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .build();
   }
 
   @GetMapping(
@@ -316,12 +406,45 @@ public class GroupController {
       @PathVariable("realm") String realm,
       @PathVariable("group_id") String groupId,
       @PathVariable("user_id") String userId,
-      @PathVariable("application") String applicationName) {
+      @PathVariable("application") String applicationName,
+      @Parameter(
+              description = "Name of the userStorage where the user is located",
+              required = false)
+          @RequestParam(name = "storage", required = false)
+          String storage,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
-    groupService.addUserToGroup(realm, userId, applicationName, groupId);
+    ProviderResponse response =
+        groupService.addUserToGroup(
+            realm,
+            storage,
+            userId,
+            applicationName,
+            groupId,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
     URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
-    return ResponseEntity.status(HttpStatus.OK)
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
         .header(HttpHeaders.LOCATION, location.toString())
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
         .build();
   }
 
@@ -334,12 +457,45 @@ public class GroupController {
       @PathVariable("realm") String realm,
       @PathVariable("group_id") String groupId,
       @PathVariable("user_id") String userId,
-      @PathVariable("application") String applicationName) {
+      @PathVariable("application") String applicationName,
+      @Parameter(
+              description = "Name of the userStorage where the user is located",
+              required = false)
+          @RequestParam(name = "storage", required = false)
+          String storage,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
 
-    groupService.deleteUserFromGroup(realm, userId, applicationName, groupId);
+    ProviderResponse response =
+        groupService.deleteUserFromGroup(
+            realm,
+            storage,
+            userId,
+            applicationName,
+            groupId,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
     URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
-    return ResponseEntity.status(HttpStatus.OK)
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
         .header(HttpHeaders.LOCATION, location.toString())
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
         .build();
   }
 }

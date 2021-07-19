@@ -13,13 +13,17 @@
 */
 package fr.insee.sugoi.jms.listener;
 
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.jms.model.BrokerRequest;
+import fr.insee.sugoi.jms.model.BrokerResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jms.annotation.JmsListener;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -39,21 +43,53 @@ public class JmsReceiverRequest {
   @Value("${fr.insee.sugoi.jms.queue.requests.name:}")
   private String queueUrgentRequestName;
 
+  @Value("${fr.insee.sugoi.jms.queue.response.name:}")
+  private String queueResponseName;
+
+  @Value("${fr.insee.sugoi.jms.queue.response.name:}")
+  private String queueUrgentResponseName;
+
+  @Autowired
+  @Qualifier("asynchronous")
+  JmsTemplate jmsTemplate;
+
   @JmsListener(
       destination = "${fr.insee.sugoi.jms.queue.requests.name:}",
       containerFactory = "myFactory")
   public void onRequest(BrokerRequest request) throws Exception {
     logger.debug(
-        "New message with uuid {} on queue {} message: {}",
-        request.getUuid(),
+        "New message with correlactionId {} on queue {} message: {}",
+        request.getCorrelationId(),
         queueRequestName,
         request);
-    router.exec(request);
+    ProviderResponse response = router.exec(request);
+    BrokerResponse br = new BrokerResponse();
+    br.setProviderResponse(response);
+    jmsTemplate.convertAndSend(
+        queueResponseName,
+        br,
+        m -> {
+          m.setJMSCorrelationID(request.getCorrelationId());
+          return m;
+        });
   }
 
   @JmsListener(destination = "${fr.insee.sugoi.jms.priority.queue.request.name:}")
   public void onUrgentRequest(BrokerRequest request) throws Exception {
-    logger.debug("New message on queue {} message: {}", queueUrgentRequestName, request);
-    router.exec(request);
+    logger.debug(
+        "New message with correlactionId {} on queue {} message: {}",
+        request.getCorrelationId(),
+        queueRequestName,
+        request);
+    ProviderResponse response = router.exec(request);
+    BrokerResponse br = new BrokerResponse();
+    br.setProviderResponse(response);
+    jmsTemplate.convertAndSend(
+        queueResponseName,
+        br,
+        m -> {
+          m.setJMSCorrelationID(request.getCorrelationId());
+          return m;
+        });
   }
 }

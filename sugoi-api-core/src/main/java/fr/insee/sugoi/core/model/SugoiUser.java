@@ -13,9 +13,10 @@
 */
 package fr.insee.sugoi.core.model;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class SugoiUser {
+public class SugoiUser implements Serializable {
 
   private String name;
 

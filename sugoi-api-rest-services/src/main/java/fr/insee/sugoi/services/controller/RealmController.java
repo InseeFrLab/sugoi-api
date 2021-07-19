@@ -14,8 +14,12 @@
 package fr.insee.sugoi.services.controller;
 
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.ConfigService;
 import fr.insee.sugoi.model.Realm;
+import fr.insee.sugoi.services.Utils;
 import fr.insee.sugoi.services.decider.AuthorizeMethodDecider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +33,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -36,12 +41,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -126,18 +133,39 @@ public class RealmController {
                   schema = @Schema(implementation = Realm.class))
             })
       })
-  public ResponseEntity<Realm> createRealm(@RequestBody Realm realm) {
-    if (configService.getRealm(realm.getName()) != null) {
-      return ResponseEntity.status(HttpStatus.CONFLICT).build();
-    }
-    configService.createRealm(realm);
-    return ResponseEntity.created(createRealmURI(realm.getName()))
-        .body(
-            configService
-                .getRealm(realm.getName())
-                .orElseThrow(() -> new RealmNotFoundException("Cannot found realm " + realm)));
+  public ResponseEntity<Realm> createRealm(
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication,
+      @RequestBody Realm realm) {
+    ProviderResponse response =
+        configService.createRealm(
+            realm,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, true, false))
+        .location(createRealmURI(realm.getName()))
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .body(response.getEntity() != null ? (Realm) response.getEntity() : null);
   }
 
+  // TODO According to the status send by provider does http code must change ?
   @PutMapping(
       value = "/realms/{id}",
       consumes = {MediaType.APPLICATION_JSON_VALUE},
@@ -164,14 +192,39 @@ public class RealmController {
             })
       })
   public ResponseEntity<Realm> updateRealm(
-      @RequestBody Realm realm, @PathVariable("id") String id) {
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication,
+      @RequestBody Realm realm,
+      @PathVariable("id") String id) {
     if (!realm.getName().equalsIgnoreCase(id)) {
       return ResponseEntity.badRequest().build();
     }
-    configService.updateRealm(realm);
-    return ResponseEntity.ok()
+    ProviderResponse response =
+        configService.updateRealm(
+            realm,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, false))
         .location(createRealmURI(realm.getName()))
-        .body(configService.getRealm(realm.getName()).get());
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .body(response.getEntity() != null ? (Realm) response.getEntity() : null);
   }
 
   @DeleteMapping(
@@ -190,12 +243,36 @@ public class RealmController {
             description = "Realm deleted",
             content = {@Content(mediaType = "application/json")})
       })
-  public ResponseEntity<String> deleteRealm(@PathVariable("id") String id) {
-    if (configService.getRealm(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-    configService.deleteRealm(id);
-    return ResponseEntity.noContent().build();
+  public ResponseEntity<ProviderResponse> deleteRealm(
+      @PathVariable("id") String id,
+      @Parameter(description = "Allowed asynchronous request", required = false)
+          @RequestHeader(name = "X-SUGOI-ASYNCHRONOUS-ALLOWED-REQUEST", defaultValue = "false")
+          boolean isAsynchronous,
+      @Parameter(description = "Make request prioritary", required = false)
+          @RequestHeader(name = "X-SUGOI-URGENT-REQUEST", defaultValue = "false")
+          boolean isUrgent,
+      @Parameter(description = "Transaction Id", required = false)
+          @RequestHeader(name = "X-SUGOI-TRANSACTION-ID", required = false)
+          String transactionId,
+      Authentication authentication) {
+    ProviderResponse response =
+        configService.deleteRealm(
+            id,
+            new ProviderRequest(
+                new SugoiUser(
+                    authentication.getName(),
+                    authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.toList())),
+                isAsynchronous,
+                transactionId,
+                isUrgent));
+
+    return ResponseEntity.status(Utils.convertStatusTHttpStatus(response, false, true))
+        .header("X-SUGOI-TRANSACTION-ID", response.getRequestId())
+        .header("X-SUGOI-REQUEST-STATUS", response.getStatus().toString())
+        .build();
   }
 
   private URI createRealmURI(String realmName) {

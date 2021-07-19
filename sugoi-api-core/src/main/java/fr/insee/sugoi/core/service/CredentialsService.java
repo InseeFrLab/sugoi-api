@@ -16,6 +16,8 @@ package fr.insee.sugoi.core.service;
 import fr.insee.sugoi.core.exceptions.PasswordPolicyNotMetException;
 import fr.insee.sugoi.core.exceptions.RealmNotFoundException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.paging.PasswordChangeRequest;
 import fr.insee.sugoi.model.paging.SendMode;
 import java.util.List;
@@ -33,12 +35,13 @@ public interface CredentialsService {
    * @throws RealmNotFoundException if realm doesn't exist
    * @throws UserNotFoundException if user doesn't exist in realm
    */
-  void reinitPassword(
+  ProviderResponse reinitPassword(
       String realm,
       String userStorage,
       String userId,
       PasswordChangeRequest pcr,
-      List<SendMode> sendMode);
+      List<SendMode> sendMode,
+      ProviderRequest providerRequest);
 
   /**
    * Change the password of an user, check if the new password meets the realm password policy and
@@ -53,7 +56,12 @@ public interface CredentialsService {
    * @throws PasswordPolicyNotMetException if password doesn't meet the password policy set for the
    *     realm
    */
-  void changePassword(String realm, String userStorage, String userId, PasswordChangeRequest pcr);
+  ProviderResponse changePassword(
+      String realm,
+      String userStorage,
+      String userId,
+      PasswordChangeRequest pcr,
+      ProviderRequest providerRequest);
 
   /**
    * Init the password of an user, check if the provided password met the realm password policy and
@@ -69,12 +77,13 @@ public interface CredentialsService {
    * @throws PasswordPolicyNotMetException if password doesn't meet the password policy set for the
    *     realm
    */
-  void initPassword(
+  ProviderResponse initPassword(
       String realm,
       String userStorage,
       String userId,
       PasswordChangeRequest pcr,
-      List<SendMode> sendMode);
+      List<SendMode> sendMode,
+      ProviderRequest providerRequest);
 
   /**
    * Check if the provided credentials allow to authenticate the current user

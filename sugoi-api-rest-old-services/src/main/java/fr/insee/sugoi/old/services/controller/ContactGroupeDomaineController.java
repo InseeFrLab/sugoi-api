@@ -17,6 +17,8 @@ import fr.insee.sugoi.converter.mapper.OuganextSugoiMapper;
 import fr.insee.sugoi.converter.ouganext.Groupe;
 import fr.insee.sugoi.core.exceptions.GroupNotFoundException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.GroupService;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.User;
@@ -37,6 +39,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -159,7 +163,8 @@ public class ContactGroupeDomaineController {
           String nomAppli,
       @Parameter(description = "Group name", required = true)
           @PathVariable(name = "nomgroupe", required = true)
-          String nomGroupe) {
+          String nomGroupe,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     groupService
@@ -185,7 +190,22 @@ public class ContactGroupeDomaineController {
             .anyMatch(g -> g.getName().equals(nomGroupe) && g.getAppName().equals(nomAppli))) {
       return new ResponseEntity<String>("Contact already in group", HttpStatus.CONFLICT);
     } else {
-      groupService.addUserToGroup(realmUserStorage.getRealm(), identifiant, nomAppli, nomGroupe);
+      groupService.addUserToGroup(
+          realmUserStorage.getRealm(),
+          realmUserStorage.getUserStorage(),
+          identifiant,
+          nomAppli,
+          nomGroupe,
+          new ProviderRequest(
+              new SugoiUser(
+                  authentication.getName(),
+                  authentication.getAuthorities().stream()
+                      .map(GrantedAuthority::getAuthority)
+                      .map(String::toUpperCase)
+                      .collect(Collectors.toList())),
+              false,
+              null,
+              false));
       return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
   }
@@ -242,7 +262,8 @@ public class ContactGroupeDomaineController {
           String nomAppli,
       @Parameter(description = "Group name", required = true)
           @PathVariable(name = "nomgroupe", required = true)
-          String nomGroupe) {
+          String nomGroupe,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
     User user =
@@ -258,7 +279,21 @@ public class ContactGroupeDomaineController {
                 group ->
                     group.getAppName().equals(nomAppli) && group.getName().equals(nomGroupe))) {
       groupService.deleteUserFromGroup(
-          realmUserStorage.getRealm(), identifiant, nomAppli, nomGroupe);
+          realmUserStorage.getRealm(),
+          realmUserStorage.getUserStorage(),
+          identifiant,
+          nomAppli,
+          nomGroupe,
+          new ProviderRequest(
+              new SugoiUser(
+                  authentication.getName(),
+                  authentication.getAuthorities().stream()
+                      .map(GrantedAuthority::getAuthority)
+                      .map(String::toUpperCase)
+                      .collect(Collectors.toList())),
+              false,
+              null,
+              false));
       return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     } else {
       return new ResponseEntity<>("Contact doesn't belong to group", HttpStatus.CONFLICT);

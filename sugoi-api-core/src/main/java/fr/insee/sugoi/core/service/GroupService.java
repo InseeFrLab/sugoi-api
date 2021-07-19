@@ -17,6 +17,8 @@ import fr.insee.sugoi.core.exceptions.GroupAlreadyExistException;
 import fr.insee.sugoi.core.exceptions.GroupNotCreatedException;
 import fr.insee.sugoi.core.exceptions.GroupNotFoundException;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Group;
 import fr.insee.sugoi.model.paging.PageResult;
 import fr.insee.sugoi.model.paging.PageableResult;
@@ -34,7 +36,8 @@ public interface GroupService {
    * @throws GroupAlreadyExistException if the group already exist
    * @throws GroupNotCreatedException if fail to create group
    */
-  Group create(String realm, String appName, Group group);
+  ProviderResponse create(
+      String realm, String appName, Group group, ProviderRequest providerRequest);
 
   /**
    * Check if the group exists in the app (by name) and update it
@@ -44,7 +47,8 @@ public interface GroupService {
    * @param group
    * @throws GroupNotFoundException if group doesn't exist in app
    */
-  void update(String realm, String appName, Group group);
+  ProviderResponse update(
+      String realm, String appName, Group group, ProviderRequest providerRequest);
 
   /**
    * Check if the group exists in the app (by name) and delete it
@@ -54,7 +58,7 @@ public interface GroupService {
    * @param id
    * @throws GroupNotFoundException if group doesn't exist in app
    */
-  void delete(String realm, String appName, String id);
+  ProviderResponse delete(String realm, String appName, String id, ProviderRequest providerRequest);
 
   /**
    * Find a group by its id in an application
@@ -88,7 +92,13 @@ public interface GroupService {
    * @throws GroupNotFoundException if group doesn't exist in app
    * @throws UserNotFoundException if user doesn't exist realm
    */
-  void addUserToGroup(String realm, String userId, String appName, String groupName);
+  ProviderResponse addUserToGroup(
+      String realm,
+      String storage,
+      String userId,
+      String appName,
+      String groupName,
+      ProviderRequest providerRequest);
 
   /**
    * Check if user and group exist and remove the user from the group
@@ -100,5 +110,11 @@ public interface GroupService {
    * @throws GroupNotFoundException if group doesn't exist in app
    * @throws UserNotFoundException if user doesn't exist realm
    */
-  void deleteUserFromGroup(String realm, String userId, String appName, String groupName);
+  ProviderResponse deleteUserFromGroup(
+      String realm,
+      String storage,
+      String userId,
+      String appName,
+      String groupName,
+      ProviderRequest providerRequest);
 }

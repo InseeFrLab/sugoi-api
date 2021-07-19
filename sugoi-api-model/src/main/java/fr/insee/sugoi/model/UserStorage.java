@@ -13,10 +13,11 @@
 */
 package fr.insee.sugoi.model;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class UserStorage {
+public class UserStorage implements Serializable {
   private String name;
   private String userSource;
   private String organizationSource;

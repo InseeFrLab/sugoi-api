@@ -13,6 +13,9 @@
 */
 package fr.insee.sugoi.core.store;
 
+import fr.insee.sugoi.core.exceptions.InvalidPasswordException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.ProviderResponse;
 import fr.insee.sugoi.model.Application;
 import fr.insee.sugoi.model.Group;
 import fr.insee.sugoi.model.Organization;
@@ -30,22 +33,22 @@ public interface WriterStore {
    * @param user
    * @return the user as it has been passed (address location migth have been added).
    */
-  User createUser(User user);
+  ProviderResponse createUser(User user, ProviderRequest providerRequest);
 
   /**
    * Replace the user with the same id by the updatedUser in the store.
    *
    * @param updatedUser
-   * @return the updatedUser as it has been passed (address location migth have been added).
+   * @return A provider response
    */
-  User updateUser(User updatedUser);
+  ProviderResponse updateUser(User updatedUser, ProviderRequest providerRequest);
 
   /**
    * Delete the user id in the store.
    *
    * @param organizationId
    */
-  void deleteUser(String id);
+  ProviderResponse deleteUser(String id, ProviderRequest providerRequest);
 
   /**
    * Create the organization in the store.
@@ -55,7 +58,7 @@ public interface WriterStore {
    *     UserStorage.
    * @return the organization as it has been passed (address location migth have been added).
    */
-  Organization createOrganization(Organization organization);
+  ProviderResponse createOrganization(Organization organization, ProviderRequest providerRequest);
 
   /**
    * Replace the organization with the same id by the updatedOrganization in the store.
@@ -65,7 +68,8 @@ public interface WriterStore {
    *     UserStorage.
    * @return the updatedOrganization as it has been passed (address location migth have been added).
    */
-  Organization updateOrganization(Organization updatedOrganization);
+  ProviderResponse updateOrganization(
+      Organization updatedOrganization, ProviderRequest providerRequest);
 
   /**
    * Delete the organization id in the store.
@@ -74,7 +78,7 @@ public interface WriterStore {
    * @throws UnsupportedOperationException if the configuration for organizations is not set on the
    *     UserStorage.
    */
-  void deleteOrganization(String organizationId);
+  ProviderResponse deleteOrganization(String organizationId, ProviderRequest providerRequest);
 
   /**
    * Create the application in the store. If the application contains groups, add it but do not add
@@ -85,7 +89,7 @@ public interface WriterStore {
    *     Realm.
    * @return the application as it has been passed
    */
-  Application createApplication(Application application);
+  ProviderResponse createApplication(Application application, ProviderRequest providerRequest);
 
   /**
    * Replace the application with the same id by the updatedApplication in the store. Groups that do
@@ -98,7 +102,8 @@ public interface WriterStore {
    *     Realm.
    * @return the updateApplication as it has been passed
    */
-  Application updateApplication(Application updatedApplication);
+  ProviderResponse updateApplication(
+      Application updatedApplication, ProviderRequest providerRequest);
 
   /**
    * Delete the application applicationName in the store.
@@ -107,7 +112,7 @@ public interface WriterStore {
    *     Realm.
    * @param applicationName
    */
-  void deleteApplication(String applicationName);
+  ProviderResponse deleteApplication(String applicationName, ProviderRequest providerRequest);
 
   /**
    * Create the group in the application appName. Users are not added.
@@ -118,7 +123,7 @@ public interface WriterStore {
    *     set.
    * @return the group as it has been passed
    */
-  Group createGroup(String appName, Group group);
+  ProviderResponse createGroup(String appName, Group group, ProviderRequest providerRequest);
 
   /**
    * Replace the group of same name in the application appName by updatedGroup. Users are unchanged.
@@ -129,7 +134,7 @@ public interface WriterStore {
    *     set.
    * @return the group as it has been passed.
    */
-  Group updateGroup(String appName, Group updatedGroup);
+  ProviderResponse updateGroup(String appName, Group updatedGroup, ProviderRequest providerRequest);
 
   /**
    * Delete the group groupName of the application appName in the store. Users remain unchanged.
@@ -139,7 +144,7 @@ public interface WriterStore {
    * @throws UnsupportedOperationException if the configuration for applications or groups are not
    *     set.
    */
-  void deleteGroup(String appName, String groupName);
+  ProviderResponse deleteGroup(String appName, String groupName, ProviderRequest providerRequest);
 
   /**
    * Add a user to the group groupName in the application appName. The user might not exist on the
@@ -151,7 +156,8 @@ public interface WriterStore {
    * @throws UnsupportedOperationException if the configuration for applications or groups is not
    *     set.
    */
-  void addUserToGroup(String appName, String groupName, String userId);
+  ProviderResponse addUserToGroup(
+      String appName, String groupName, String userId, ProviderRequest providerRequest);
 
   /**
    * Delete the user userId from the group groupName in the application appName.
@@ -162,7 +168,8 @@ public interface WriterStore {
    * @throws UnsupportedOperationException if the configuration for applications or groups is not
    *     set.
    */
-  void deleteUserFromGroup(String appName, String groupName, String userId);
+  ProviderResponse deleteUserFromGroup(
+      String appName, String groupName, String userId, ProviderRequest providerRequest);
 
   /**
    * Set the password of user to initPassword. If password already exist, changes it.
@@ -172,8 +179,12 @@ public interface WriterStore {
    * @param pcr not used
    * @param sendModes not used
    */
-  void initPassword(
-      User user, String initPassword, PasswordChangeRequest pcr, List<SendMode> sendModes);
+  ProviderResponse initPassword(
+      String user,
+      String initPassword,
+      PasswordChangeRequest pcr,
+      List<SendMode> sendModes,
+      ProviderRequest providerRequest);
 
   /**
    * Set the password of user to generatedPassword. Same behaviour than initPassword.
@@ -183,8 +194,12 @@ public interface WriterStore {
    * @param pcr not used
    * @param sendModes not used
    */
-  void reinitPassword(
-      User user, String generatedPassword, PasswordChangeRequest pcr, List<SendMode> sendModes);
+  ProviderResponse reinitPassword(
+      String userId,
+      String generatedPassword,
+      PasswordChangeRequest pcr,
+      List<SendMode> sendModes,
+      ProviderRequest providerRequest);
 
   /**
    * Change the user password from oldPassword to newPassword. If user do not have password
@@ -196,16 +211,12 @@ public interface WriterStore {
    * @param pcr not used
    * @throws InvalidPasswordException if oldPassword doesn't match the actual password.
    */
-  void changePassword(User user, String oldPassword, String newPassword, PasswordChangeRequest pcr);
-
-  /**
-   * Change the store attribute of a user corresponding to has the password been reset.
-   *
-   * @param user
-   * @param isReset true to tell the password has been reset and false to tell the password hasn't
-   *     been.
-   */
-  void changePasswordResetStatus(User user, boolean isReset);
+  ProviderResponse changePassword(
+      String user,
+      String oldPassword,
+      String newPassword,
+      PasswordChangeRequest pcr,
+      ProviderRequest providerRequest);
 
   /**
    * Add the attribute to the app-managed-attribute-key in the store
@@ -213,7 +224,8 @@ public interface WriterStore {
    * @param userId
    * @param attribute
    */
-  void addAppManagedAttribute(String userId, String attributeKey, String attributeValue);
+  ProviderResponse addAppManagedAttribute(
+      String userId, String attributeKey, String attributeValue, ProviderRequest providerRequest);
 
   /**
    * Delete the attribute value from the app-managed-attribute-key in the store
@@ -221,5 +233,6 @@ public interface WriterStore {
    * @param userId
    * @param attribute
    */
-  void deleteAppManagedAttribute(String userId, String attributeKey, String attributeValue);
+  ProviderResponse deleteAppManagedAttribute(
+      String userId, String attributeKey, String attributeValue, ProviderRequest providerRequest);
 }

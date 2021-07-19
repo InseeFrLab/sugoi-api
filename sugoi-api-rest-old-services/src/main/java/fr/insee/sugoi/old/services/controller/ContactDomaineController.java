@@ -17,6 +17,8 @@ import fr.insee.sugoi.converter.mapper.OuganextSugoiMapper;
 import fr.insee.sugoi.converter.ouganext.Contact;
 import fr.insee.sugoi.converter.ouganext.InfoFormattage;
 import fr.insee.sugoi.core.exceptions.UserNotFoundException;
+import fr.insee.sugoi.core.model.ProviderRequest;
+import fr.insee.sugoi.core.model.SugoiUser;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.User;
 import fr.insee.sugoi.old.services.model.ConverterDomainRealm;
@@ -30,11 +32,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -109,20 +114,53 @@ public class ContactDomaineController {
                   "Boolean indicates whether the contact must be created if not already exist",
               required = false)
           @RequestParam(name = "creation")
-          boolean creation) {
+          boolean creation,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
     contact.setIdentifiant(identifiant);
     User sugoiUser = ouganextSugoiMapper.serializeToSugoi(contact, User.class);
 
     if (creation) {
-      User userCreated =
-          userService.create(
-              realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), sugoiUser);
+      userService.create(
+          realmUserStorage.getRealm(),
+          realmUserStorage.getUserStorage(),
+          sugoiUser,
+          new ProviderRequest(
+              new SugoiUser(
+                  authentication.getName(),
+                  authentication.getAuthorities().stream()
+                      .map(GrantedAuthority::getAuthority)
+                      .map(String::toUpperCase)
+                      .collect(Collectors.toList())),
+              false,
+              null,
+              false));
       return ResponseEntity.status(HttpStatus.OK)
-          .body(ouganextSugoiMapper.serializeToOuganext(userCreated, Contact.class));
+          .body(
+              ouganextSugoiMapper.serializeToOuganext(
+                  userService
+                      .findById(
+                          realmUserStorage.getRealm(),
+                          realmUserStorage.getUserStorage(),
+                          identifiant)
+                      .get(),
+                  Contact.class));
     }
 
-    userService.update(domaine, null, sugoiUser);
+    userService.update(
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        sugoiUser,
+        new ProviderRequest(
+            new SugoiUser(
+                authentication.getName(),
+                authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toList())),
+            false,
+            null,
+            false));
     return ResponseEntity.status(HttpStatus.OK)
         .body(
             ouganextSugoiMapper.serializeToOuganext(
@@ -219,10 +257,24 @@ public class ContactDomaineController {
               description = "Name of the domaine where the operation will be made",
               required = true)
           @PathVariable("domaine")
-          String domaine) {
+          String domaine,
+      Authentication authentication) {
     RealmStorage realmUserStorage = converterDomainRealm.getRealmForDomain(domaine);
 
-    userService.delete(realmUserStorage.getRealm(), realmUserStorage.getUserStorage(), identifiant);
+    userService.delete(
+        realmUserStorage.getRealm(),
+        realmUserStorage.getUserStorage(),
+        identifiant,
+        new ProviderRequest(
+            new SugoiUser(
+                authentication.getName(),
+                authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toList())),
+            false,
+            null,
+            false));
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 

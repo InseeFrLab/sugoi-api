@@ -20,29 +20,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.app.cucumber.utils.StepData;
 import fr.insee.sugoi.app.cucumber.utils.WhoamiView;
-import io.cucumber.java.Before;
-import io.cucumber.java.Scenario;
 import io.cucumber.java.en.Then;
 
 public class WhoamiGlue {
   private StepData stepData;
 
-  private Scenario scenario;
-
-  @Before
-  public void before(Scenario scenario) {
-    this.scenario = scenario;
-  }
-
-  public WhoamiGlue(StepData stepData) {
-    this.stepData = stepData;
-  }
-
   @Then("the client expect to receive his rights")
   public void expect_to_receive_his_rights() {
     ObjectMapper mapper = new ObjectMapper();
     try {
-      WhoamiView view = mapper.readValue(stepData.getLatestResponse().getBody(), WhoamiView.class);
+      mapper.readValue(stepData.getLatestResponse().getBody(), WhoamiView.class);
       assertThat("Data receive is a whoamiView", true, is(true));
     } catch (JsonProcessingException e) {
       assertThat("Data receive is a whoamiView", false, is(true));

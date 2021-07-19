@@ -21,12 +21,15 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insee.sugoi.commons.services.controller.technics.SugoiAdviceController;
 import fr.insee.sugoi.core.configuration.GlobalKeysConfig;
+import fr.insee.sugoi.core.model.ProviderResponse;
+import fr.insee.sugoi.core.model.ProviderResponse.ProviderResponseStatus;
 import fr.insee.sugoi.core.realm.RealmProvider;
 import fr.insee.sugoi.core.service.PermissionService;
 import fr.insee.sugoi.core.service.UserService;
 import fr.insee.sugoi.model.Realm;
 import fr.insee.sugoi.model.User;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -73,12 +76,21 @@ public class AppManagedUserAttributeControllerTest {
   public void get200WhenAddCorrectAttributes() {
     try {
 
-      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(realm);
+      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(Optional.of(realm));
       Mockito.when(permissionService.getUserRealmAppManager(Mockito.any()))
           .thenReturn(List.of("*\\appA", "*\\appB"));
-      Mockito.when(
-              permissionService.isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(true);
+      Mockito.doReturn(true)
+          .when(permissionService)
+          .isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString());
+      Mockito.doReturn(new ProviderResponse("", "requestId", ProviderResponseStatus.OK, null, null))
+          .when(userService)
+          .addAppManagedAttribute(
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.patch(
                   "/realms/domaine1/storages/test/users/Toto/my-attribute-key/prop_role_appA")
@@ -87,7 +99,7 @@ public class AppManagedUserAttributeControllerTest {
               .with(csrf());
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      assertThat("Response must be 200 OK", response.getStatus(), is(200));
+      assertThat("Response must be 200 OK", response.getStatus(), is(204));
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -100,10 +112,19 @@ public class AppManagedUserAttributeControllerTest {
   public void get200WhenAddCorrectAttributesWhenAdminOrWriter() {
     try {
 
-      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(realm);
-      Mockito.when(
-              permissionService.isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(true);
+      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(Optional.of(realm));
+      Mockito.doReturn(true)
+          .when(permissionService)
+          .isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString());
+      Mockito.doReturn(new ProviderResponse("", "requestId", ProviderResponseStatus.OK, null, null))
+          .when(userService)
+          .addAppManagedAttribute(
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any());
       RequestBuilder requestBuilder =
           MockMvcRequestBuilders.patch(
                   "/realms/domaine1/storages/test/users/Toto/my-attribute-key/prop_role_appA")
@@ -112,7 +133,7 @@ public class AppManagedUserAttributeControllerTest {
               .with(csrf());
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      assertThat("Response must be 200 OK", response.getStatus(), is(200));
+      assertThat("Response must be 200 OK", response.getStatus(), is(204));
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -128,11 +149,20 @@ public class AppManagedUserAttributeControllerTest {
       Mockito.when(
               permissionService.isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
           .thenReturn(false);
-      Mockito.when(
-              permissionService.isValidAttributeAccordingAttributePattern(
-                  Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-          .thenReturn(true);
-      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(realm);
+      Mockito.doReturn(true)
+          .when(permissionService)
+          .isValidAttributeAccordingAttributePattern(
+              Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+      Mockito.doReturn(new ProviderResponse("", "requestId", ProviderResponseStatus.OK, null, null))
+          .when(userService)
+          .addAppManagedAttribute(
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any(),
+              Mockito.any());
+      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(Optional.of(realm));
       Mockito.when(
               permissionService.getAllowedAttributePattern(
                   Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.anyString()))
@@ -145,7 +175,7 @@ public class AppManagedUserAttributeControllerTest {
               .with(csrf());
       MockHttpServletResponse response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
-      assertThat("Response must be 200 OK", response.getStatus(), is(200));
+      assertThat("Response must be 200 OK", response.getStatus(), is(204));
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -161,7 +191,7 @@ public class AppManagedUserAttributeControllerTest {
       Mockito.when(
               permissionService.isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
           .thenReturn(false);
-      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(realm);
+      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(Optional.of(realm));
       Mockito.when(
               permissionService.getAllowedAttributePattern(
                   Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.anyString()))
@@ -190,7 +220,7 @@ public class AppManagedUserAttributeControllerTest {
       Mockito.when(
               permissionService.isWriter(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
           .thenReturn(false);
-      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(realm);
+      Mockito.when(realmProvider.load(Mockito.anyString())).thenReturn(Optional.of(realm));
       Mockito.when(
               permissionService.getAllowedAttributePattern(
                   Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.anyString()))
