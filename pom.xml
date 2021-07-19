@@ -34,7 +34,7 @@
 		<commons-lang.version>2.6</commons-lang.version>
 		<org.springdoc.version>1.5.9</org.springdoc.version>
 		<cucumber.version>6.10.2</cucumber.version>
-		<cucumber-reporting-plugin.version>4.0.103</cucumber-reporting-plugin.version>
+		<cucumber-reporting-plugin.version>5.0.0</cucumber-reporting-plugin.version>
 		<httpclient.version>4.5.13</httpclient.version>
 		<apache.commons.version>1.9</apache.commons.version>
 		<apache.commons.csv.version>1.8</apache.commons.csv.version>
