@@ -16,6 +16,7 @@ package fr.insee.sugoi.store.ldap;
 import com.unboundid.ldap.sdk.Filter;
 import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.ldap.sdk.LDAPSearchException;
+import com.unboundid.ldap.sdk.ResultCode;
 import com.unboundid.ldap.sdk.SearchRequest;
 import com.unboundid.ldap.sdk.SearchResult;
 import com.unboundid.ldap.sdk.SearchResultEntry;
@@ -322,7 +323,21 @@ public class LdapReaderStore extends LdapStore implements ReaderStore {
       throws LDAPSearchException {
     SearchRequest searchRequest = new SearchRequest(baseDn, scope, filter, "*", "+");
     LdapUtils.setRequestControls(searchRequest, pageableResult, config);
-    SearchResult searchResult = ldapMonoConnection.search(searchRequest);
+    SearchResult searchResult = null;
+    try {
+      searchResult = ldapMonoConnection.search(searchRequest);
+    } catch (LDAPException e) {
+      if (e.getResultCode().intValue() == ResultCode.SERVER_DOWN_INT_VALUE) {
+        try {
+          ldapMonoConnection = LdapFactory.getSingleConnection(config, true);
+        } catch (LDAPException e1) {
+          throw new RuntimeException(e1);
+        }
+        searchResult = ldapMonoConnection.search(searchRequest);
+      } else {
+        throw new RuntimeException(e);
+      }
+    }
     PageResult<ResultType> pageResult = new PageResult<>();
     pageResult.setResults(
         searchResult.getSearchEntries().stream()

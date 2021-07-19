@@ -70,6 +70,11 @@ public class LdapFactory {
 
   public static LDAPConnection getSingleConnection(Map<String, String> config)
       throws LDAPException {
+    return getSingleConnection(config, false);
+  }
+
+  public static LDAPConnection getSingleConnection(Map<String, String> config, boolean forceErase)
+      throws LDAPException {
     String key =
         config.get(LdapConfigKeys.REALM_NAME)
             + "_"
@@ -80,8 +85,8 @@ public class LdapFactory {
     String name =
         config.get(LdapConfigKeys.REALM_NAME) + "_" + config.get(LdapConfigKeys.NAME) + "_R";
 
-    if (!openLdapMonoConnectionConfig.containsKey(key)) {
-      if (openLdapMonoConnection.containsKey(name)) {
+    if (!openLdapMonoConnectionConfig.containsKey(key) || forceErase) {
+      if (openLdapMonoConnection.containsKey(name) || forceErase) {
         openLdapMonoConnection.get(name).close();
       }
       openLdapMonoConnectionConfig.put(key, name);
